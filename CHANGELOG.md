@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0
+
+- Guild sync is now automatic, and the **Send to Guild** button is gone:
+  - Officer edits and imports go out about 10 seconds after the last change.
+  - Guildmates who log in with an older copy get the newest list from an online officer.
+  - An officer who logs in with a newer list updates the guildmates who are online.
+- Updates, renames and deletions all reach everyone, because each update carries the whole list and replaces the old one.
+- An officer who logs in with an older list than the guildmates online is warned not to edit until another officer comes online.
+- When two officers are online, only one of them answers a guildmate who logs in.
+
+Made with the assistance of AI.
+
 ## 0.4.0
 
 - Beacon's lists now live in the game's **Options → AddOns → Beacon** instead of a separate window. The minimap button and `/beacon` open Options straight to that page; during combat it opens as soon as combat ends.

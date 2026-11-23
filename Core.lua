@@ -183,11 +183,13 @@ function ns.ValidateEntry(entry)
 	return true
 end
 
--- Records an edit. Guild edits are stamped so they win over older copies on sync.
+-- Records an edit. Guild edits are stamped so they win over older copies, and
+-- are shared with the guild automatically (see Sync.lua).
 local function Touch(which, list)
 	if which == "guild" then
 		list.rev = math.max(GetServerTime(), list.rev + 1)
 		list.editor = ns.PlayerName()
+		ns.QueueShare()
 	end
 	ns.ListChanged()
 end

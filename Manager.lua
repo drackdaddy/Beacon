@@ -60,10 +60,10 @@ local function ShowView(value)
 	Select(nil)
 end
 
--- Message shown after an edit; guild edits still need sending.
+-- Message shown after an edit; guild edits are shared automatically.
 local function SavedMessage(verb)
 	if current == "guild" then
-		return verb .. " Choose Send to Guild to share your changes."
+		return verb .. " Your guild gets the change automatically in a few seconds."
 	end
 	return verb
 end
@@ -279,10 +279,6 @@ local function CreatePage()
 	-- Bottom bar
 	frame.count = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
 	frame.count:SetPoint("BOTTOMLEFT", 14, 16)
-	frame.sendButton = ns.CreateButton(frame, "Send to Guild", 120, function()
-		ns.SendList(true)
-		ns.RefreshManager()
-	end)
 	frame.exportButton = ns.CreateButton(frame, "Export...", 90, function()
 		ns.OpenTransfer("export", current)
 	end)
@@ -296,7 +292,7 @@ end
 -- Lines up the visible bottom-bar buttons from the right edge.
 local function LayoutBottomButtons()
 	local previous
-	for _, button in ipairs({ frame.sendButton, frame.exportButton, frame.importButton }) do
+	for _, button in ipairs({ frame.exportButton, frame.importButton }) do
 		if button:IsShown() then
 			button:ClearAllPoints()
 			if previous then
@@ -339,16 +335,23 @@ function ns.RefreshManager()
 	frame.empty:SetShown(#shown == 0)
 
 	local guildName = GetGuildInfo("player")
+	local subtitleColor = HIGHLIGHT_FONT_COLOR
 	if current == "personal" then
 		frame.subtitle:SetText("Your own aliases. Only you use them, and they win over guild aliases with the same name.")
 	elseif not guildName then
 		frame.subtitle:SetText("Join a guild to receive its shared list.")
+	elseif editable and ns.HasNewerGuildList() then
+		frame.subtitle:SetText("A guildmate has a newer list than yours. Wait for another officer to come online before editing, or your edits will replace it.")
+		subtitleColor = RED_FONT_COLOR
+	elseif ns.IsSending() then
+		frame.subtitle:SetText(guildName .. "  -  sharing the list with your guild...")
 	elseif list and list.editor then
 		frame.subtitle:SetText(string.format("%s  -  last changed by %s on %s",
 			guildName, Ambiguate(list.editor, "guild"), date("%b %d", list.rev)))
 	else
 		frame.subtitle:SetText(guildName)
 	end
+	frame.subtitle:SetTextColor(subtitleColor:GetRGB())
 	if #shown < #entries then
 		frame.count:SetText(string.format("%d of %d shown", #shown, #entries))
 	else
@@ -359,9 +362,6 @@ function ns.RefreshManager()
 	frame.info:SetShown(not editable and guildName ~= nil)
 	frame.deleteButton:SetEnabled(selected ~= nil)
 
-	frame.sendButton:SetShown(current == "guild" and editable)
-	frame.sendButton:SetEnabled(list ~= nil and not ns.IsSending())
-	frame.sendButton:SetText(ns.IsSending() and "Sending..." or "Send to Guild")
 	frame.exportButton:SetEnabled(#entries > 0)
 	frame.importButton:SetShown(editable)
 	LayoutBottomButtons()

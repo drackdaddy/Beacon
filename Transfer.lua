@@ -48,7 +48,7 @@ local function Import()
 	end
 	local summary = string.format("Added %d, updated %d.", added, updated)
 	if target == "guild" and added + updated > 0 then
-		summary = summary .. " Choose Send to Guild to share them."
+		summary = summary .. " Shared with your guild automatically."
 	end
 	if #skipped > 0 then
 		-- The full list of skipped lines can be long, so it goes to chat.

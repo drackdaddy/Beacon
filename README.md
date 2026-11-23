@@ -7,7 +7,7 @@ Beacon is a free, lightweight addon for **World of Warcraft: Forever** that lets
 - **@mentions from guild chat**: Type friendly aliases like `@raid`, `@tanks` or `@Kaerpow`. Beacon turns them into real Discord role and person mentions just before your message is sent.
 - **Autocomplete**: Start typing `@` to see the matching aliases.
 - **Readable chat**: Your chat window shows friendly names, and Discord gets the working mention.
-- **Officer-managed guild list**: Officers keep one shared list of members and roles, and Beacon syncs it to every guild member who has the addon. Nobody has to look up Discord IDs or set up aliases themselves.
+- **Officer-managed guild list**: Officers keep one shared list of members and roles, and Beacon syncs it automatically to every guild member who has the addon. Nobody has to look up Discord IDs or set up aliases themselves.
 - **Personal list**: Everyone can also keep their own aliases, which only they use.
 - **Import and export**: Paste many aliases at once, for example straight from a spreadsheet, or export a list to back it up or copy it elsewhere.
 - **In the game's Options**: Your lists live under Options → AddOns → Beacon, and the minimap button opens them in one click.
@@ -68,7 +68,16 @@ Choose **Export...** on either list to get the list as text in the same format, 
 
 Officers are the **Guild Master rank and the rank directly below it**. Only they can edit and import into the guild list, and Beacon only accepts guild lists sent by them.
 
-After editing or importing the **Guild** list, choose **Send to Guild** to share your changes with everyone online who has Beacon. Guild members who log in later get the newest list automatically from any officer who is online.
+Sharing is automatic. There's no button to press:
+
+- **When an officer edits or imports**, the guild list goes out to everyone online with Beacon about 10 seconds after the last change. Several quick edits are sent together.
+- **When anyone logs in** with an older copy, an officer who is online sends them the newest list.
+- **When an officer logs in** with a newer copy than the guildmates who are online, it's sent to them.
+- **Updates, renames and deletions** all arrive, because every update carries the whole list and replaces the old copy.
+
+Only lists from officers are accepted, so members can't change the guild list. That means an officer who logs in with an old copy, while only members are online, can't get the newer list until another officer is online. Beacon warns that officer, in chat and in red on the **Guild** list, not to edit until then. Otherwise their older list would replace the newer one.
+
+If two officers change the list at almost the same moment, the later change wins.
 
 The list is sent in small pieces about one second apart so it doesn't flood the guild's addon channel. A full 500-entry list takes about two minutes.
 
