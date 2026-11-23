@@ -1,0 +1,13 @@
+## Interface: 16001
+## Title: Beacon
+## Notes: @mention Discord roles and people from guild chat. Officers keep one shared guild list.
+## Author: Drackus
+## Version: 0.1.0
+## IconTexture: Interface\Icons\Ability_Paladin_BeaconofLight
+## SavedVariables: BeaconDB
+
+Core.lua
+Mentions.lua
+Sync.lua
+Autocomplete.lua
+Manager.lua
