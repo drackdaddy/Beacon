@@ -7,7 +7,7 @@ local _, ns = ...
 -- and @here. Only the text the player is already sending is changed; nothing
 -- is ever posted by the addon.
 -- Events: EventRegistry "ChatFrame.OnEditBoxPreSendText", PLAYER_LOGIN
--- SavedVariables: none (reads the guild list through ns.GetLookups)
+-- SavedVariables: none (reads both lists through ns.GetLookups)
 ---------------------------------------------------------------------------
 local MAX_MESSAGE_BYTES = 255
 

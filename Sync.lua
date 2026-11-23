@@ -10,13 +10,14 @@ local _, ns = ...
 -- at most once a minute. Officers can also send right away from the window.
 -- Lists are only accepted from players whose guild rank is an officer rank,
 -- and only when newer than the local copy. Pieces go out one per second to
--- keep addon traffic light.
+-- keep addon traffic light, so a full 500-entry list takes about two minutes.
+-- The personal list never leaves the player's computer.
 -- Events: CHAT_MSG_ADDON, PLAYER_ENTERING_WORLD, GUILD_ROSTER_UPDATE
 -- SavedVariables: BeaconDB.guilds (through ns.GetGuildData)
 ---------------------------------------------------------------------------
 local PREFIX = "Beacon"
-local CHUNK_BYTES = 200
-local MAX_CHUNKS = 100
+local CHUNK_BYTES = 230 -- plus a ~21 byte header stays under the 255 byte message limit
+local MAX_CHUNKS = 200  -- enough for 500 entries of maximum length
 local SEND_INTERVAL = 1
 local MAX_SEND_FAILURES = 30
 local REPLY_COOLDOWN = 60

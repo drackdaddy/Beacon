@@ -1,9 +1,9 @@
 ## Interface: 16001
 ## Title: Beacon
-## Notes: @mention Discord roles and people from guild chat. Officers keep one shared guild list.
+## Notes: @mention Discord roles and people from guild chat. Officers keep one shared guild list; everyone can keep a personal list.
 ## Author: Drackus
-## Version: 0.1.0
-## IconTexture: Interface\Icons\Ability_Paladin_BeaconofLight
+## Version: 0.2.0
+## IconTexture: Interface\AddOns\Beacon\Beacon-Logo.png
 ## SavedVariables: BeaconDB
 
 Core.lua
@@ -11,3 +11,5 @@ Mentions.lua
 Sync.lua
 Autocomplete.lua
 Manager.lua
+Import.lua
+Minimap.lua

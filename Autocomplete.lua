@@ -2,10 +2,11 @@ local _, ns = ...
 
 ---------------------------------------------------------------------------
 -- Autocomplete
--- Typing @ in Guild or Guild Discord chat shows matching aliases in a
--- tooltip-style list above the chat box. Tab inserts the highlighted alias,
--- Shift+Tab moves the highlight, a click inserts that alias, and Enter sends
--- the message with the highlighted alias filled in (see Mentions.lua).
+-- Typing @ in Guild or Guild Discord chat shows matching aliases from the
+-- guild and personal lists in a tooltip-style list above the chat box. Tab
+-- inserts the highlighted alias, Shift+Tab moves the highlight, a click
+-- inserts that alias, and Enter sends the message with the highlighted alias
+-- filled in (see Mentions.lua).
 -- Only post-hooks are used on Blizzard's chat boxes, so the secure send path
 -- stays untouched.
 -- Events: PLAYER_LOGIN; chat edit box OnTextChanged, OnTabPressed and OnHide hooks
@@ -55,11 +56,11 @@ function ns.AcceptSuggestion(editBox, index)
 	return true
 end
 
--- Returns up to MAX_ROWS entries whose alias or display name starts with partial.
+-- Returns up to MAX_ROWS entries from both lists whose alias or display name starts with partial.
 local function FindMatches(partial)
-	local data = ns.GetGuildData()
+	local byAlias = ns.GetLookups()
 	local matches = {}
-	for _, entry in ipairs(data and data.entries or {}) do
+	for _, entry in pairs(byAlias) do
 		if entry.alias:sub(1, #partial) == partial or entry.name:lower():sub(1, #partial) == partial then
 			matches[#matches + 1] = entry
 		end
