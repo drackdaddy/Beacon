@@ -28,8 +28,7 @@ end
 
 local function SetKind(value)
 	kind = value
-	frame.roleRadio:SetChecked(value == "role")
-	frame.personRadio:SetChecked(value == "user")
+	frame.kindChoice:Select(value)
 end
 
 -- Loads entry into the editor, or clears it for a new entry when entry is nil.
@@ -95,22 +94,10 @@ local function CreateInput(parent, label, y, maxLetters)
 	return box
 end
 
--- Creates a small radio button with a label to its right; onClick runs when chosen.
-local function CreateRadio(parent, label, onClick)
-	local radio = CreateFrame("CheckButton", nil, parent, "UIRadioButtonTemplate")
-	local text = radio:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	text:SetPoint("LEFT", radio, "RIGHT", 4, 0)
-	text:SetText(label)
-	radio:SetScript("OnClick", onClick)
-	return radio
-end
-
 -- Sets the list filter to "all", "role" or "user" and redraws the list.
 local function SetFilter(value)
 	showKind = value
-	for filterValue, radio in pairs(frame.filterRadios) do
-		radio:SetChecked(filterValue == value)
-	end
+	frame.filterChoice:Select(value)
 	ns.RefreshManager()
 end
 
@@ -121,6 +108,36 @@ function ns.CreateButton(parent, label, width, onClick)
 	button:SetText(label)
 	button:SetScript("OnClick", onClick)
 	return button
+end
+
+-- Creates a row of full-size game buttons where one is chosen at a time; the
+-- chosen one stays lit with white text. These are much easier to click than
+-- radio buttons. options = { { value, label }, ... }; onChoose(value) runs on click.
+-- The caller anchors row.buttons[1]. row:Select(value) marks a button as chosen.
+local function CreateChoiceRow(parent, options, width, onChoose)
+	local row = { buttons = {} }
+	for i, option in ipairs(options) do
+		local button = ns.CreateButton(parent, option[2], width, function()
+			onChoose(option[1])
+		end)
+		button.value = option[1]
+		if i > 1 then
+			button:SetPoint("LEFT", row.buttons[i - 1], "RIGHT", 4, 0)
+		end
+		row.buttons[i] = button
+	end
+	function row:Select(value)
+		for _, button in ipairs(self.buttons) do
+			local chosen = button.value == value
+			button:SetNormalFontObject(chosen and GameFontHighlight or GameFontNormal)
+			if chosen then
+				button:LockHighlight()
+			else
+				button:UnlockHighlight()
+			end
+		end
+	end
+	return row
 end
 
 -- Fills one list row. Rows are created plain and set up the first time they are used.
@@ -207,23 +224,12 @@ local function CreateManager()
 	end)
 
 	-- Show: All / Roles / People
-	local showLabel = inset:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-	showLabel:SetPoint("TOPLEFT", 14, -34)
-	showLabel:SetText("Show:")
-	frame.filterRadios = {}
-	local previous = showLabel
-	for _, option in ipairs({ { "all", "All" }, { "role", "Roles" }, { "user", "People" } }) do
-		local radio = CreateRadio(inset, option[2], function()
-			SetFilter(option[1])
-		end)
-		radio:SetPoint("LEFT", previous, "RIGHT", previous == showLabel and 8 or 50, 0)
-		frame.filterRadios[option[1]] = radio
-		previous = radio
-	end
+	frame.filterChoice = CreateChoiceRow(inset, { { "all", "All" }, { "role", "Roles" }, { "user", "People" } }, 86, SetFilter)
+	frame.filterChoice.buttons[1]:SetPoint("TOPLEFT", 8, -30)
 	SetFilter("all")
 
 	local scrollBox = CreateFrame("Frame", nil, inset, "WowScrollBoxList")
-	scrollBox:SetPoint("TOPLEFT", 6, -52)
+	scrollBox:SetPoint("TOPLEFT", 6, -58)
 	scrollBox:SetPoint("BOTTOMRIGHT", inset, "BOTTOMLEFT", 262, 6)
 	local scrollBar = CreateFrame("EventFrame", nil, inset, "MinimalScrollBar")
 	scrollBar:SetPoint("TOPLEFT", scrollBox, "TOPRIGHT", 6, 0)
@@ -254,10 +260,8 @@ local function CreateManager()
 	local typeLabel = editor:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
 	typeLabel:SetPoint("TOPLEFT", 0, -138)
 	typeLabel:SetText("Mentions a")
-	frame.roleRadio = CreateRadio(editor, "Role", function() SetKind("role") end)
-	frame.roleRadio:SetPoint("TOPLEFT", typeLabel, "BOTTOMLEFT", 2, -4)
-	frame.personRadio = CreateRadio(editor, "Person", function() SetKind("user") end)
-	frame.personRadio:SetPoint("LEFT", frame.roleRadio, "RIGHT", 60, 0)
+	frame.kindChoice = CreateChoiceRow(editor, { { "role", "Role" }, { "user", "Person" } }, 113, SetKind)
+	frame.kindChoice.buttons[1]:SetPoint("TOPLEFT", typeLabel, "BOTTOMLEFT", 0, -4)
 
 	local saveButton = ns.CreateButton(editor, "Save", 74, Save)
 	saveButton:SetPoint("TOPLEFT", 0, -186)

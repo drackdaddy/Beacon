@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+
+- The **All / Roles / People** filter and the editor's **Role / Person** choice are now full-size buttons instead of small radio buttons, so they're easier to click. The chosen button stays lit.
+
+Made with the assistance of AI.
+
 ## 0.3.2
 
 - New **Show: All / Roles / People** filter under the search box on each tab.
