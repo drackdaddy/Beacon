@@ -46,6 +46,7 @@ end
 --     log = { { time, text, sync }, ... } newest first; officers' record of syncs and changes
 --   BeaconDB.personal = { entries }                       -- the player's own list, account-wide
 --   BeaconDB.minimap = { angle, hide }                     -- minimap button position and visibility
+--   BeaconDB.discordHandled = time                         -- last Discord export imported or dismissed (nil at first)
 --   entries = { { alias = "raid", name = "Raid", kind = "role" | "user", id = "123..." }, ... }
 ---------------------------------------------------------------------------
 ns.On("ADDON_LOADED", function(name)
@@ -242,27 +243,27 @@ end
 
 local KINDS = { role = "role", r = "role", person = "user", user = "user", p = "user", u = "user" }
 
--- Adds or updates many entries at once from pasted text, one per line:
+-- Reads pasted import text, one entry per line:
 --   alias, Role|Person, Discord ID[, display name]
 -- Commas or tabs (spreadsheet copy) separate fields; a leading @ on the alias,
--- blank lines and lines starting with # are ignored. Existing aliases are updated.
--- Returns added, updated and a list of skipped line numbers, or nil and a message.
-function ns.ImportEntries(which, text)
-	if not ns.CanEdit(which) then
-		return nil, "Only officers can edit the guild list."
-	end
-	local list = ns.GetList(which, true)
-	local byAlias = {}
-	for _, entry in ipairs(list.entries) do
-		byAlias[entry.alias] = entry
-	end
-
-	local added, updated, skipped = 0, 0, {}
+-- blank lines and lines starting with # are ignored, except the
+--   # Beacon Discord export <stamp> part <i> of <n>
+-- header the companion tool writes. Returns the valid entries (each with its
+-- line number), the skipped line numbers, and whether the text holds every
+-- part of one Discord export (true), only some parts ("partial") or none (nil).
+local function ParseImport(text)
+	local items, skipped = {}, {}
+	local stamp, total, parts, mixed = nil, nil, {}, false
 	local lineNumber = 0
 	for line in (text .. "\n"):gmatch("([^\n]*)\n") do
 		lineNumber = lineNumber + 1
 		line = strtrim(line)
-		if line ~= "" and line:sub(1, 1) ~= "#" then
+		local exportStamp, part, partCount = line:match("^#%s*Beacon Discord export (%d+) part (%d+) of (%d+)")
+		if exportStamp then
+			mixed = mixed or (stamp and (stamp ~= exportStamp or total ~= partCount))
+			stamp, total = exportStamp, partCount
+			parts[tonumber(part)] = true
+		elseif line ~= "" and line:sub(1, 1) ~= "#" then
 			local fields = {}
 			for field in (line:gsub("\t", ",") .. ","):gmatch("([^,]*),") do
 				fields[#fields + 1] = strtrim(field)
@@ -273,24 +274,150 @@ function ns.ImportEntries(which, text)
 				kind = KINDS[(fields[2] or ""):lower()] or "",
 				id = fields[3] or "",
 				name = (fields[4] and fields[4] ~= "") and fields[4] or alias,
+				line = lineNumber,
 			}
-			local existing = byAlias[entry.alias]
-			if #fields > 4 or not ns.ValidateEntry(entry) or (not existing and #list.entries >= ns.MAX_ENTRIES) then
+			if #fields > 4 or not ns.ValidateEntry(entry) then
 				skipped[#skipped + 1] = lineNumber
-			elseif existing then
-				existing.name, existing.kind, existing.id = entry.name, entry.kind, entry.id
-				updated = updated + 1
 			else
-				table.insert(list.entries, entry)
-				byAlias[entry.alias] = entry
-				added = added + 1
+				items[#items + 1] = entry
 			end
 		end
 	end
-	if added + updated > 0 then
-		Touch(which, list, string.format("You imported: added %d, updated %d", added, updated))
+
+	local discord
+	if stamp then
+		discord = "partial"
+		if not mixed then
+			discord = true
+			for i = 1, tonumber(total) do
+				discord = discord and parts[i] == true
+			end
+			discord = discord or "partial"
+		end
 	end
-	return added, updated, skipped
+	return items, skipped, discord
+end
+
+-- Returns base, or base with a number added (raid2, raid3...), so that it isn't
+-- already used by another entry in byAlias. Returns nil if no free name is found.
+local function FreeAlias(base, byAlias)
+	if not byAlias[base] then
+		return base
+	end
+	for n = 2, 99 do
+		local candidate = base:sub(1, 24 - #tostring(n)) .. n
+		if not byAlias[candidate] then
+			return candidate
+		end
+	end
+end
+
+-- Copies a list's entries so later edits can be compared against them.
+local function Snapshot(entries)
+	local copy = {}
+	for i, entry in ipairs(entries) do
+		copy[i] = { alias = entry.alias, name = entry.name, kind = entry.kind, id = entry.id }
+	end
+	return copy
+end
+
+-- Applies a Discord export to list, matching entries by Discord ID: people and
+-- roles already in the list keep their alias and get their current display
+-- name; new ones are added (with a number added to the alias if it's taken).
+-- With a complete export, entries whose ID isn't in it are removed: they've
+-- left the server or the role was deleted.
+-- Returns added, updated, removed; adds lines that didn't fit to skipped.
+local function ApplyDiscordExport(list, items, complete, skipped)
+	local inExport = {}
+	for _, item in ipairs(items) do
+		inExport[item.kind .. item.id] = true
+	end
+	-- Remove first, so a newcomer can take the alias of someone who left.
+	local removed = 0
+	if complete then
+		for i = #list.entries, 1, -1 do
+			local entry = list.entries[i]
+			if not inExport[entry.kind .. entry.id] then
+				table.remove(list.entries, i)
+				removed = removed + 1
+			end
+		end
+	end
+
+	local byId, byAlias = {}, {}
+	for _, entry in ipairs(list.entries) do
+		byId[entry.kind .. entry.id] = entry
+		byAlias[entry.alias] = entry
+	end
+	local added, updated = 0, 0
+	for _, item in ipairs(items) do
+		local key = item.kind .. item.id
+		local existing = byId[key]
+		local alias = not existing and FreeAlias(item.alias, byAlias)
+		if existing then
+			if existing.name ~= item.name then
+				existing.name = item.name
+				updated = updated + 1
+			end
+		elseif alias and #list.entries < ns.MAX_ENTRIES then
+			local entry = { alias = alias, name = item.name, kind = item.kind, id = item.id }
+			table.insert(list.entries, entry)
+			byId[key], byAlias[alias] = entry, entry
+			added = added + 1
+		else
+			skipped[#skipped + 1] = item.line
+		end
+	end
+	return added, updated, removed
+end
+
+-- Adds or updates many entries at once from pasted text (see ParseImport).
+-- Ordinary text is matched by alias: existing aliases are updated, the rest
+-- added. A Discord export from the companion tool is matched by Discord ID and,
+-- when every part of it is present, also removes entries missing from it.
+-- Returns added, updated, skipped line numbers, removed and, when only some
+-- parts of a Discord export were pasted, a note for the player; or nil and a message.
+function ns.ImportEntries(which, text)
+	if not ns.CanEdit(which) then
+		return nil, "Only officers can edit the guild list."
+	end
+	local list = ns.GetList(which, true)
+	local before = Snapshot(list.entries)
+	local items, skipped, discord = ParseImport(text)
+	local added, updated, removed, note = 0, 0, 0, nil
+
+	if discord then
+		added, updated, removed = ApplyDiscordExport(list, items, discord == true, skipped)
+		if discord == "partial" then
+			note = "Paste every part of the Discord export together to also remove people who have left."
+		end
+	else
+		local byAlias = {}
+		for _, entry in ipairs(list.entries) do
+			byAlias[entry.alias] = entry
+		end
+		for _, item in ipairs(items) do
+			local existing = byAlias[item.alias]
+			if existing then
+				existing.name, existing.kind, existing.id = item.name, item.kind, item.id
+				updated = updated + 1
+			elseif #list.entries < ns.MAX_ENTRIES then
+				local entry = { alias = item.alias, name = item.name, kind = item.kind, id = item.id }
+				table.insert(list.entries, entry)
+				byAlias[entry.alias] = entry
+				added = added + 1
+			else
+				skipped[#skipped + 1] = item.line
+			end
+		end
+	end
+
+	if added + updated + removed > 0 then
+		local source = discord and "You synced from Discord: " or "You imported: "
+		Touch(which, list, source .. (ns.DescribeChanges(before, list.entries) or "no changes"))
+	end
+	table.sort(skipped)
+	return added, updated, skipped, removed, note
 end
 
 -- Returns a list as text in the format ns.ImportEntries reads, sorted by alias,
@@ -381,12 +508,16 @@ end
 
 ---------------------------------------------------------------------------
 -- Slash command
--- /beacon opens Beacon in Options > AddOns; /beacon minimap shows or hides the minimap button.
+-- /beacon opens Beacon in Options > AddOns; /beacon minimap shows or hides the
+-- minimap button; /beacon discord offers the companion tool's latest export.
 ---------------------------------------------------------------------------
 SLASH_BEACON1 = "/beacon"
 SlashCmdList.BEACON = function(input)
-	if strtrim(input):lower() == "minimap" then
+	local command = strtrim(input):lower()
+	if command == "minimap" then
 		ns.ToggleMinimapButton()
+	elseif command == "discord" then
+		ns.OfferDiscordImport()
 	else
 		ns.OpenManager()
 	end

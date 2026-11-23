@@ -27,7 +27,8 @@ local function SetStatus(text, color)
 end
 
 -- Describes skipped line numbers, listing at most MAX_SKIPPED_SHOWN of them.
-local function SkippedText(skipped)
+-- Also used by the Discord import prompt.
+function ns.SkippedText(skipped)
 	local shown = {}
 	for i = 1, math.min(#skipped, MAX_SKIPPED_SHOWN) do
 		shown[i] = skipped[i]
@@ -39,21 +40,37 @@ local function SkippedText(skipped)
 	return text .. " (check the format, or the list is full)."
 end
 
+-- Returns a one-line result such as "Added 3, updated 1, removed 2." for an
+-- import into which. Also used by the Discord import prompt.
+function ns.ImportSummary(which, added, updated, removed)
+	local summary = string.format("Added %d, updated %d", added, updated)
+	if removed > 0 then
+		summary = summary .. string.format(", removed %d", removed)
+	end
+	summary = summary .. "."
+	if which == "guild" and added + updated + removed > 0 then
+		summary = summary .. " Shared with your guild automatically."
+	end
+	return summary
+end
+
 local function Import()
 	local editBox = frame.input:GetEditBox()
-	local added, updated, skipped = ns.ImportEntries(target, editBox:GetText())
+	local added, updated, skipped, removed, note = ns.ImportEntries(target, editBox:GetText())
 	if not added then
 		SetStatus(updated, RED_FONT_COLOR)
 		return
 	end
-	local summary = string.format("Added %d, updated %d.", added, updated)
-	if target == "guild" and added + updated > 0 then
-		summary = summary .. " Shared with your guild automatically."
+	local summary = ns.ImportSummary(target, added, updated, removed)
+	-- Longer details go to chat, because the status line has room for one line.
+	if note then
+		ns.Print(note)
 	end
 	if #skipped > 0 then
-		-- The full list of skipped lines can be long, so it goes to chat.
 		SetStatus(summary .. " Some lines were skipped; see chat.", RED_FONT_COLOR)
-		ns.Print(SkippedText(skipped))
+		ns.Print(ns.SkippedText(skipped))
+	elseif note then
+		SetStatus(summary .. " See chat.", NORMAL_FONT_COLOR)
 	else
 		SetStatus(summary, GREEN_FONT_COLOR)
 		editBox:SetText("")

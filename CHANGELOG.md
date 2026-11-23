@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0
+
+- New **Discord companion tool** in the `Companion` folder. It reads your server's members and roles with your own Discord bot.
+  - It asks for the bot token on first run and keeps it in Windows Credential Manager.
+  - It sends the export straight into Beacon (type `/reload`), posts it in a Discord channel, or both.
+- Importing a Discord export matches by Discord ID: new people and roles are added, nickname changes update display names, and people or roles no longer in the server are removed.
+- After `/reload`, Beacon offers to import a new export into **Personal** or, for officers, **Guild**. `/beacon discord` offers it again.
+- The import window now also reports removals.
+
+Made with the assistance of AI.
+
 ## 0.6.0
 
 - New officers-only **Log** view: shows the last sync, then a history of edits, imports, shares and received lists, including which aliases were added, changed or removed and who sent each list. It keeps the last 200 events for each guild.

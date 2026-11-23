@@ -4,12 +4,13 @@ Beacon is a free, lightweight addon for **World of Warcraft: Forever** that lets
 
 ## Features
 
-- **@mentions from guild chat**: Type friendly aliases like `@raid`, `@tanks` or `@Kaerpow`. Beacon turns them into real Discord role and person mentions just before your message is sent.
+- **@mentions from guild chat**: Type friendly aliases like `@raid`, `@tanks` or `@Elara`. Beacon turns them into real Discord role and person mentions just before your message is sent.
 - **Autocomplete**: Start typing `@` to see the matching aliases.
 - **Readable chat**: Your chat window shows friendly names, and Discord gets the working mention.
 - **Officer-managed guild list**: Officers keep one shared list of members and roles, and Beacon syncs it automatically to every guild member who has the addon. Nobody has to look up Discord IDs or set up aliases themselves.
 - **Personal list**: Everyone can also keep their own aliases, which only they use.
 - **Import and export**: Paste many aliases at once, for example straight from a spreadsheet, or export a list to back it up or copy it elsewhere.
+- **Discord companion tool**: Fill your lists straight from your Discord server's members and roles, and keep them in step as people join and leave.
 - **In the game's Options**: Your lists live under Options → AddOns → Beacon, and the minimap button opens them in one click.
 - **Lightweight**: Beacon only changes text when you send a guild-chat message. It never posts on its own.
 
@@ -53,7 +54,7 @@ Choose **Import...** on a list you can edit, paste your aliases, one per line, a
 ```
 alias, Role or Person, Discord ID, display name
 raid, Role, 123456789012345678, Raid Team
-kaerpow, Person, 223456789012345678
+elara, Person, 223456789012345678
 ```
 
 - The display name is optional. Without one, the alias is used.
@@ -99,6 +100,57 @@ The list is sent in small pieces about one second apart so it doesn't flood the 
 
 If a role mention reaches Discord but nobody is notified, turn on **Allow anyone to @mention this role** for that role in Discord.
 
+## Discord companion tool
+
+The `Companion` folder has a small Windows tool that reads your Discord server's members and roles with your own Discord bot and turns them into Beacon aliases. The addon itself can't connect to Discord, so this runs outside the game.
+
+When you import its export into a list, Beacon matches everyone by Discord ID:
+
+- **New people and roles** are added. If an alias is already taken, a number is added, for example `@dark2`.
+- **Nickname changes** update the display name. Everyone keeps the `@alias` they already use.
+- **People who left the server, or roles that were deleted,** are removed from that list.
+
+### Set up the bot (one time)
+
+1. Go to <https://discord.com/developers/applications>, choose **New Application**, name it (for example `Beacon Export`) and choose **Create**.
+2. Open **Bot**, choose **Reset Token** and copy the token. Treat it like a password.
+3. On the same page, under **Privileged Gateway Intents**, turn on **Server Members Intent** and save.
+4. Open **OAuth2 → URL Generator**, tick **bot**, then under **Bot Permissions** tick **View Channels** and **Send Messages**. Also tick **Send Messages in Threads** if you'll post to a forum post or thread. Open the generated link and add the bot to your server.
+
+If you'll post to a private channel, also allow the bot **View Channel** and **Send Messages** there.
+
+### Run it
+
+Double-click `Companion\BeaconDiscordExport.bat`. The first time, it installs Python and the parts it needs if they're missing, then asks:
+
+1. **Your bot token.** It's stored in Windows Credential Manager, never in a file.
+2. **Where the export should go:**
+   - **Straight into Beacon in game.** It writes `DiscordExportData.lua` into the Beacon folder. In game, type `/reload` and choose **Personal**, or **Guild** if you're an officer. The game can stay open.
+   - **Post in a Discord channel**, as code blocks. Paste them into **Import...** in Beacon. For a big server, paste **all the parts together** so Beacon can also remove people who left.
+   - **Both.**
+3. **The channel link**, if you post to a channel. Right-click the channel and choose **Copy Link**.
+4. **Whether to include Discord roles**, for aliases like `@raidteam`.
+
+Later runs reuse your answers. Press **Enter** to export, or type **C** to change them. `/beacon discord` shows the import prompt again in game.
+
+The first time you add this version of Beacon, restart the game once, so it loads the new files. After that, `/reload` is enough.
+
+### How names become aliases
+
+Names are cleaned up so they can be typed in game: accents and fancy letters become plain letters, and emoji and symbols are dropped. The alias is the cleaned name in lower case without spaces, for example **Dark Knight** becomes `@darkknight`. Names with no usable letters are skipped and listed when the tool finishes.
+
+### Troubleshooting
+
+| Message | Fix |
+|---|---|
+| `Discord rejected the bot token` | Reset the token in the Developer Portal and run the tool again to paste the new one. |
+| `turn on 'Server Members Intent'` | Do step 3 of the bot setup. |
+| `the bot can't see that server` | Add the bot to your server, or copy the channel link again. |
+| `channel not found` / `can't see that channel` / `isn't allowed to post` | Copy the link again, or give the bot **View Channel** and **Send Messages** in that channel. |
+| `Python was installed but could not be found` | Close the window and run the tool again. |
+
+The export holds everyone's display name and Discord ID, so post it only where your members or officers can see it.
+
 ## Limits
 
 - A guild message can be at most 255 characters once mentions are added. If it's longer, Beacon sends your aliases as plain text and tells you to shorten the message.
@@ -107,7 +159,7 @@ If a role mention reaches Discord but nobody is notified, turn on **Allow anyone
 
 ## Credits
 
-Inspired by the Discord bridge idea in GuildPing by kaerpow. Beacon is a separate addon written from scratch and contains no GuildPing code. The Beacon logo is original artwork made for this addon.
+Beacon is written from scratch. The Beacon logo is original artwork made for this addon.
 
 Beacon is not affiliated with Discord or Blizzard Entertainment.
 
