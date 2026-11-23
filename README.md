@@ -1,6 +1,6 @@
 # Beacon
 
-Beacon is a free, lightweight addon for **World of Warcraft: Forever** that lets you @mention Discord roles and people from guild chat. It works with Blizzard's official guild Discord bridge.
+Beacon is a lightweight addon for **World of Warcraft: Forever** that lets you @mention Discord roles and people from guild chat. It works with Blizzard's official guild Discord bridge.
 
 ## Features
 
