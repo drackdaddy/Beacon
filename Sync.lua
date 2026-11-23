@@ -39,7 +39,7 @@ local ANSWER_COOLDOWN = 60
 
 local queried = {}   -- guild keys already announced this session
 local incoming = {}  -- sender -> { rev, total, parts, received } while pieces arrive
-local sending        -- { rev, messages, index, failures, ticker, announce } during a send
+local sending        -- { rev, count, messages, index, failures, ticker, announce } during a send
 local shareTimer     -- pending send after an officer's own edits
 local answerTimer    -- pending answer to a guildmate with an older copy
 local requestTimer   -- pending request to an officer with a newer copy
@@ -122,6 +122,9 @@ local function SendNextPiece()
 		if sending.index > #sending.messages then
 			if sending.announce then
 				ns.Print("Guild list shared with your guild.")
+				ns.AddLog(string.format("Shared the list with the guild (%d entries)", sending.count), true)
+			else
+				ns.AddLog(string.format("Sent the list to guildmates with an older copy (%d entries)", sending.count), true)
 			end
 			StopSending()
 		end
@@ -129,6 +132,7 @@ local function SendNextPiece()
 		sending.failures = sending.failures + 1
 		if sending.failures >= MAX_SEND_FAILURES then
 			ns.Print("Couldn't share the guild list right now. It will go out the next time a guildmate logs in or you make a change.")
+			ns.AddLog("Couldn't share the list: the game wasn't accepting addon messages")
 			-- Sent as far as it got; don't let StopSending retry straight away.
 			sending.rev = MyRev()
 			StopSending()
@@ -162,7 +166,7 @@ function SendList(announce)
 		messages[i] = string.format("D|%d|%d|%d|%s", data.rev, i, total, piece)
 	end
 
-	sending = { rev = data.rev, messages = messages, index = 1, failures = 0, announce = announce }
+	sending = { rev = data.rev, count = #data.entries, messages = messages, index = 1, failures = 0, announce = announce }
 	sending.ticker = C_Timer.NewTicker(SEND_INTERVAL, SendNextPiece)
 	ns.RefreshManager()
 	SendNextPiece()
@@ -217,14 +221,16 @@ local function CancelRequest()
 	requestTimer = nil
 end
 
--- Stores a fully received list if it is still newer than the local copy.
--- It replaces the old list completely, so deleted entries disappear too.
-local function ApplyList(rev, payload)
+-- Stores a fully received list from sender if it is still newer than the local
+-- copy. It replaces the old list completely, so deleted entries disappear too.
+local function ApplyList(sender, rev, payload)
 	local data = ns.GetGuildData(true)
 	if rev <= data.rev then
 		return
 	end
 	local editor, entries = Deserialize(payload)
+	ns.AddLog(string.format("Received the list from %s: %s", Ambiguate(sender, "guild"),
+		ns.DescribeChanges(data.entries, entries) or "no changes"), true)
 	data.rev, data.editor, data.entries = rev, editor, entries
 	-- A newer list from another officer replaces any of our own edits still waiting to go out.
 	CancelTimer(shareTimer)
@@ -268,7 +274,7 @@ local function OnPiece(sender, rev, index, total, piece)
 	end
 	if transfer.received == total then
 		incoming[sender] = nil
-		ApplyList(rev, table.concat(transfer.parts))
+		ApplyList(sender, rev, table.concat(transfer.parts))
 	end
 end
 

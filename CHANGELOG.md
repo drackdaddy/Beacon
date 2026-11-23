@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- New officers-only **Log** view: shows the last sync, then a history of edits, imports, shares and received lists, including which aliases were added, changed or removed and who sent each list. It keeps the last 200 events for each guild.
+
+Made with the assistance of AI.
+
 ## 0.5.0
 
 - Guild sync is now automatic, and the **Send to Guild** button is gone:

@@ -41,8 +41,9 @@ end
 -- Sets every SavedVariables default in one place.
 -- Events: ADDON_LOADED
 -- SavedVariables:
---   BeaconDB.guilds[guildKey] = { rev, editor, entries }  -- shared guild list, one per guild
+--   BeaconDB.guilds[guildKey] = { rev, editor, entries, log }  -- shared guild list, one per guild
 --     rev = server time of the last edit (higher wins on sync), editor = "Name-Realm"
+--     log = { { time, text, sync }, ... } newest first; officers' record of syncs and changes
 --   BeaconDB.personal = { entries }                       -- the player's own list, account-wide
 --   BeaconDB.minimap = { angle, hide }                     -- minimap button position and visibility
 --   entries = { { alias = "raid", name = "Raid", kind = "role" | "user", id = "123..." }, ... }
@@ -53,6 +54,9 @@ ns.On("ADDON_LOADED", function(name)
 	end
 	BeaconDB = BeaconDB or {}
 	BeaconDB.guilds = BeaconDB.guilds or {}
+	for _, data in pairs(BeaconDB.guilds) do
+		data.log = data.log or {}
+	end
 	BeaconDB.personal = BeaconDB.personal or { entries = {} }
 	BeaconDB.minimap = BeaconDB.minimap or { angle = 225, hide = false }
 end)
@@ -114,7 +118,7 @@ function ns.GetGuildData(create)
 	end
 	local data = BeaconDB.guilds[key]
 	if not data and create then
-		data = { rev = 0, entries = {} }
+		data = { rev = 0, entries = {}, log = {} }
 		BeaconDB.guilds[key] = data
 	end
 	return data
@@ -183,13 +187,15 @@ function ns.ValidateEntry(entry)
 	return true
 end
 
--- Records an edit. Guild edits are stamped so they win over older copies, and
--- are shared with the guild automatically (see Sync.lua).
-local function Touch(which, list)
+-- Records an edit. Guild edits are stamped so they win over older copies, are
+-- shared with the guild automatically (see Sync.lua), and are written to the
+-- officers' log as logText.
+local function Touch(which, list, logText)
 	if which == "guild" then
 		list.rev = math.max(GetServerTime(), list.rev + 1)
 		list.editor = ns.PlayerName()
 		ns.QueueShare()
+		ns.AddLog(logText)
 	end
 	ns.ListChanged()
 end
@@ -211,6 +217,7 @@ function ns.SaveEntry(which, fields, existing)
 			return nil, "@" .. fields.alias .. " is already in this list."
 		end
 	end
+	local logText = existing and ("You changed @" .. existing.alias) or ("You added @" .. fields.alias)
 	if not existing then
 		if #list.entries >= ns.MAX_ENTRIES then
 			return nil, "This list is full (" .. ns.MAX_ENTRIES .. " entries)."
@@ -219,7 +226,7 @@ function ns.SaveEntry(which, fields, existing)
 		table.insert(list.entries, existing)
 	end
 	existing.alias, existing.name, existing.kind, existing.id = fields.alias, fields.name, fields.kind, fields.id
-	Touch(which, list)
+	Touch(which, list, logText)
 	return existing
 end
 
@@ -230,7 +237,7 @@ function ns.DeleteEntry(which, entry)
 		return
 	end
 	tDeleteItem(list.entries, entry)
-	Touch(which, list)
+	Touch(which, list, "You deleted @" .. entry.alias)
 end
 
 local KINDS = { role = "role", r = "role", person = "user", user = "user", p = "user", u = "user" }
@@ -281,7 +288,7 @@ function ns.ImportEntries(which, text)
 		end
 	end
 	if added + updated > 0 then
-		Touch(which, list)
+		Touch(which, list, string.format("You imported: added %d, updated %d", added, updated))
 	end
 	return added, updated, skipped
 end
@@ -302,6 +309,74 @@ function ns.ExportEntries(which)
 		lines[#lines + 1] = table.concat({ entry.alias, entry.kind == "role" and "Role" or "Person", entry.id, entry.name }, ", ")
 	end
 	return table.concat(lines, "\n")
+end
+
+---------------------------------------------------------------------------
+-- Officers' log
+-- A record of guild list syncs and changes, kept per guild and shown only to
+-- officers. Written only while the player is an officer.
+-- SavedVariables: BeaconDB.guilds[guildKey].log
+---------------------------------------------------------------------------
+local MAX_LOG = 200
+local MAX_NAMES = 6
+
+-- Adds text to the current guild's log. sync marks entries that record a list
+-- being sent or received, which the log page shows as the last sync.
+function ns.AddLog(text, sync)
+	if not ns.IsOfficer() then
+		return
+	end
+	local log = ns.GetGuildData(true).log
+	table.insert(log, 1, { time = GetServerTime(), text = text, sync = sync })
+	for i = #log, MAX_LOG + 1, -1 do
+		log[i] = nil
+	end
+	ns.RefreshManager()
+end
+
+-- Returns "@a, @b and 3 more" for a sorted list of aliases.
+local function NameList(aliases)
+	table.sort(aliases)
+	local shown = {}
+	for i = 1, math.min(#aliases, MAX_NAMES) do
+		shown[i] = "@" .. aliases[i]
+	end
+	local text = table.concat(shown, ", ")
+	if #aliases > MAX_NAMES then
+		text = text .. string.format(" and %d more", #aliases - MAX_NAMES)
+	end
+	return text
+end
+
+-- Compares two versions of a list. Returns text such as
+-- "added @a; changed @b; removed @c", or nil when nothing changed.
+function ns.DescribeChanges(oldEntries, newEntries)
+	local before, after = {}, {}
+	for _, entry in ipairs(oldEntries) do
+		before[entry.alias] = entry
+	end
+	local added, changed, removed = {}, {}, {}
+	for _, entry in ipairs(newEntries) do
+		after[entry.alias] = true
+		local old = before[entry.alias]
+		if not old then
+			added[#added + 1] = entry.alias
+		elseif old.name ~= entry.name or old.kind ~= entry.kind or old.id ~= entry.id then
+			changed[#changed + 1] = entry.alias
+		end
+	end
+	for alias in pairs(before) do
+		if not after[alias] then
+			removed[#removed + 1] = alias
+		end
+	end
+	local parts = {}
+	for _, group in ipairs({ { "added", added }, { "changed", changed }, { "removed", removed } }) do
+		if #group[2] > 0 then
+			parts[#parts + 1] = group[1] .. " " .. NameList(group[2])
+		end
+	end
+	return #parts > 0 and table.concat(parts, "; ") or nil
 end
 
 ---------------------------------------------------------------------------

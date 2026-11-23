@@ -79,6 +79,16 @@ Only lists from officers are accepted, so members can't change the guild list. T
 
 If two officers change the list at almost the same moment, the later change wins.
 
+### Officers' log
+
+Officers see a **Log** button next to **Personal** and **Guild**. It shows when the guild list was last synced, then a history, newest first, of:
+
+- your own edits and imports
+- each time you shared the list, or sent it to a guildmate who logged in with an older copy
+- each list you received, who sent it, and exactly what changed (aliases added, changed or removed)
+
+Hover over a line to see all of it. The log keeps the last 200 events for each guild and is only recorded and shown while you're an officer.
+
 The list is sent in small pieces about one second apart so it doesn't flood the guild's addon channel. A full 500-entry list takes about two minutes.
 
 ### Finding Discord IDs

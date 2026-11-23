@@ -2,9 +2,10 @@ local _, ns = ...
 
 ---------------------------------------------------------------------------
 -- Lists page in Options > AddOns
--- Beacon's page in the game's Options window, under the AddOns tab. Two views,
+-- Beacon's page in the game's Options window, under the AddOns tab. Views,
 -- chosen with buttons at the top: Personal (the player's own aliases, shown
--- first) and Guild (shared; officers edit and send it, everyone else reads it).
+-- first), Guild (shared; officers edit it, everyone else reads it) and, for
+-- officers only, Log (guild list syncs and changes, newest first).
 -- Editable lists get an editor (alias, display name, Role/Person, Discord ID)
 -- and an Import button; every list can be exported, searched by alias or
 -- display name, and filtered to roles or people.
@@ -18,7 +19,7 @@ local HIGHLIGHT = "Interface\\QuestFrame\\UI-QuestTitleHighlight"
 local frame
 local category             -- the page's entry in Options > AddOns
 local openAfterCombat = false
-local current = "personal" -- list shown: "personal" or "guild"
+local current = "personal" -- view shown: "personal", "guild" or "log"
 local selected             -- entry loaded in the editor, or nil for a new one
 local kind = "role"        -- Role/Person choice in the editor
 local showKind = "all"     -- list filter: "all", "role" or "user"
@@ -51,7 +52,7 @@ local function Select(entry)
 	ns.RefreshManager()
 end
 
--- Switches to the "personal" or "guild" list, clearing the search and filter.
+-- Switches to the "personal", "guild" or "log" view, clearing the search and filter.
 local function ShowView(value)
 	current = value
 	frame.viewChoice:Select(value)
@@ -166,6 +167,58 @@ local function InitRow(row, entry)
 	end
 end
 
+-- Formats a server timestamp for the log, such as "Nov 23 02:31 PM".
+local function LogTime(stamp)
+	return date("%b %d %I:%M %p", stamp)
+end
+
+-- Fills one log row: time on the left, what happened on the right. Hovering a
+-- row shows the full text, which may be cut off in the row.
+local function InitLogRow(row, item)
+	if not row.time then
+		row.time = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+		row.time:SetPoint("LEFT", 6, 0)
+		row.time:SetWidth(120)
+		row.time:SetJustifyH("LEFT")
+		row.text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+		row.text:SetPoint("LEFT", row.time, "RIGHT", 6, 0)
+		row.text:SetPoint("RIGHT", -6, 0)
+		row.text:SetJustifyH("LEFT")
+		row.text:SetWordWrap(false)
+		row:EnableMouse(true)
+		row:SetScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
+			GameTooltip:SetText(self.item.text, nil, nil, nil, nil, true)
+			GameTooltip:Show()
+		end)
+		row:SetScript("OnLeave", GameTooltip_Hide)
+	end
+	row.item = item
+	row.time:SetText(LogTime(item.time))
+	row.text:SetText(item.text)
+end
+
+-- Shows the current guild's log and, above it, the most recent sync.
+local function RefreshLog()
+	local data = ns.GetGuildData()
+	local log = data and data.log or {}
+	frame.logBox:SetDataProvider(CreateDataProvider(log), ScrollBoxConstants.RetainScrollPosition)
+	frame.logEmpty:SetShown(#log == 0)
+	local lastSync
+	for _, item in ipairs(log) do
+		if item.sync then
+			lastSync = item
+			break
+		end
+	end
+	frame.subtitle:SetTextColor(HIGHLIGHT_FONT_COLOR:GetRGB())
+	if lastSync then
+		frame.subtitle:SetText(string.format("Last sync: %s  -  %s", LogTime(lastSync.time), lastSync.text))
+	else
+		frame.subtitle:SetText("Last sync: none yet. Only officers can see this log.")
+	end
+end
+
 -- Builds the page. Options sizes and positions it, so everything is anchored
 -- to its edges.
 local function CreatePage()
@@ -192,15 +245,18 @@ local function CreatePage()
 	divider:SetPoint("TOP", 0, -48)
 
 	-- Personal / Guild
-	frame.viewChoice = CreateChoiceRow(frame, { { "personal", "Personal" }, { "guild", "Guild" } }, 120, ShowView)
+	frame.viewChoice = CreateChoiceRow(frame, { { "personal", "Personal" }, { "guild", "Guild" }, { "log", "Log" } }, 120, ShowView)
 	frame.viewChoice.buttons[1]:SetPoint("TOPLEFT", 10, -60)
 	frame.subtitle = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 	frame.subtitle:SetPoint("TOPLEFT", 12, -92)
 	frame.subtitle:SetPoint("RIGHT", -12, 0)
 	frame.subtitle:SetJustifyH("LEFT")
 
-	-- Search box, filter and alias list
-	frame.search = CreateFrame("EditBox", nil, frame, "SearchBoxTemplate")
+	-- Lists view: search box, filter, alias list, editor and bottom bar
+	local listView = CreateFrame("Frame", nil, frame)
+	listView:SetAllPoints()
+	frame.listView = listView
+	frame.search = CreateFrame("EditBox", nil, listView, "SearchBoxTemplate")
 	frame.search:SetSize(266, 20)
 	frame.search:SetPoint("TOPLEFT", 16, -112)
 	frame.search:SetAutoFocus(false)
@@ -209,10 +265,10 @@ local function CreatePage()
 		ns.RefreshManager()
 	end)
 
-	frame.filterChoice = CreateChoiceRow(frame, { { "all", "All" }, { "role", "Roles" }, { "user", "People" } }, 88, SetFilter)
+	frame.filterChoice = CreateChoiceRow(listView, { { "all", "All" }, { "role", "Roles" }, { "user", "People" } }, 88, SetFilter)
 	frame.filterChoice.buttons[1]:SetPoint("TOPLEFT", 10, -136)
 
-	local listInset = CreateFrame("Frame", nil, frame, "InsetFrameTemplate")
+	local listInset = CreateFrame("Frame", nil, listView, "InsetFrameTemplate")
 	listInset:SetPoint("TOPLEFT", 10, -164)
 	listInset:SetPoint("BOTTOMLEFT", 10, 40)
 	listInset:SetWidth(272)
@@ -232,7 +288,7 @@ local function CreatePage()
 	frame.empty:SetPoint("CENTER", scrollBox)
 
 	-- Editor for lists the player may edit
-	local editor = CreateFrame("Frame", nil, frame)
+	local editor = CreateFrame("Frame", nil, listView)
 	editor:SetPoint("TOPLEFT", 306, -112)
 	editor:SetPoint("BOTTOMRIGHT", -10, 40)
 	frame.editor = editor
@@ -266,7 +322,7 @@ local function CreatePage()
 	frame.status:SetJustifyH("LEFT")
 
 	-- Read-only note for the guild list
-	frame.info = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+	frame.info = listView:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	frame.info:SetPoint("TOPLEFT", 306, -116)
 	frame.info:SetPoint("RIGHT", -16, 0)
 	frame.info:SetJustifyH("LEFT")
@@ -277,14 +333,36 @@ local function CreatePage()
 		.. GRAY_FONT_COLOR:WrapTextInColorCode("@everyone and @here are always blocked."))
 
 	-- Bottom bar
-	frame.count = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+	frame.count = listView:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
 	frame.count:SetPoint("BOTTOMLEFT", 14, 16)
-	frame.exportButton = ns.CreateButton(frame, "Export...", 90, function()
+	frame.exportButton = ns.CreateButton(listView, "Export...", 90, function()
 		ns.OpenTransfer("export", current)
 	end)
-	frame.importButton = ns.CreateButton(frame, "Import...", 90, function()
+	frame.importButton = ns.CreateButton(listView, "Import...", 90, function()
 		ns.OpenTransfer("import", current)
 	end)
+
+	-- Log view (officers only)
+	local logView = CreateFrame("Frame", nil, frame)
+	logView:SetAllPoints()
+	frame.logView = logView
+	local logInset = CreateFrame("Frame", nil, logView, "InsetFrameTemplate")
+	logInset:SetPoint("TOPLEFT", 10, -112)
+	logInset:SetPoint("BOTTOMRIGHT", -10, 10)
+	local logBox = CreateFrame("Frame", nil, logInset, "WowScrollBoxList")
+	logBox:SetPoint("TOPLEFT", 4, -4)
+	logBox:SetPoint("BOTTOMRIGHT", -18, 4)
+	local logBar = CreateFrame("EventFrame", nil, logInset, "MinimalScrollBar")
+	logBar:SetPoint("TOPLEFT", logBox, "TOPRIGHT", 4, 0)
+	logBar:SetPoint("BOTTOMLEFT", logBox, "BOTTOMRIGHT", 4, 0)
+	local logScrollView = CreateScrollBoxListLinearView()
+	logScrollView:SetElementExtent(20)
+	logScrollView:SetElementInitializer("Frame", InitLogRow)
+	ScrollUtil.InitScrollBoxListWithScrollBar(logBox, logBar, logScrollView)
+	frame.logBox = logBox
+	frame.logEmpty = logInset:CreateFontString(nil, "ARTWORK", "GameFontDisable")
+	frame.logEmpty:SetPoint("CENTER", logBox)
+	frame.logEmpty:SetText("No guild list activity yet.")
 
 	ShowView("personal")
 end
@@ -310,6 +388,19 @@ function ns.RefreshManager()
 	if not frame or not frame:IsVisible() then
 		return
 	end
+	local officer = ns.IsOfficer()
+	frame.viewChoice.buttons[3]:SetShown(officer)
+	if current == "log" and not officer then
+		ShowView("personal")
+		return
+	end
+	frame.listView:SetShown(current ~= "log")
+	frame.logView:SetShown(current == "log")
+	if current == "log" then
+		RefreshLog()
+		return
+	end
+
 	local list = ns.GetList(current)
 	local entries = list and list.entries or {}
 	local editable = ns.CanEdit(current)
