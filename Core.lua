@@ -284,6 +284,24 @@ function ns.ImportEntries(which, text)
 	return added, updated, skipped
 end
 
+-- Returns a list as text in the format ns.ImportEntries reads, sorted by alias,
+-- so an export can be pasted back into Import on any list or character.
+function ns.ExportEntries(which)
+	local list = ns.GetList(which)
+	local entries = {}
+	for i, entry in ipairs(list and list.entries or {}) do
+		entries[i] = entry
+	end
+	table.sort(entries, function(a, b)
+		return a.alias < b.alias
+	end)
+	local lines = { "# alias, Role or Person, Discord ID, display name" }
+	for _, entry in ipairs(entries) do
+		lines[#lines + 1] = table.concat({ entry.alias, entry.kind == "role" and "Role" or "Person", entry.id, entry.name }, ", ")
+	end
+	return table.concat(lines, "\n")
+end
+
 ---------------------------------------------------------------------------
 -- Slash command
 -- /beacon opens the lists window; /beacon minimap shows or hides the minimap button.

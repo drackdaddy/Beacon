@@ -1,18 +1,25 @@
 local _, ns = ...
 
 ---------------------------------------------------------------------------
--- Mass import
--- A window where the player pastes many aliases at once, one per line, into
--- the list they are viewing: the personal list for anyone, the guild list for
--- officers. Existing aliases are updated and the rest are added.
+-- Import and export
+-- One window with two uses:
+--   Import: the player pastes many aliases at once, one per line, into the
+--     list they are viewing (personal for anyone, guild for officers).
+--     Existing aliases are updated and the rest are added.
+--   Export: shows the viewed list as text in the same format, selected and
+--     ready to copy, for backups or pasting into Import elsewhere.
 -- Events: none
 -- SavedVariables: none (changes go through ns.ImportEntries)
 ---------------------------------------------------------------------------
 local LIST_NAMES = { guild = "guild list", personal = "personal list" }
 local MAX_SKIPPED_SHOWN = 10
+local IMPORT_HELP = "One per line: alias, Role or Person, Discord ID, display name (optional).\n"
+	.. GRAY_FONT_COLOR:WrapTextInColorCode("Example: raid, Role, 123456789012345678, Raid Team")
+local EXPORT_HELP = "Press Ctrl+C to copy. Paste it into Import on any list or character, or keep it as a backup.\n"
+	.. GRAY_FONT_COLOR:WrapTextInColorCode("Press Escape to close.")
 
 local frame
-local target -- list receiving the import: "guild" or "personal"
+local target -- list being imported into: "guild" or "personal"
 
 local function SetStatus(text, color)
 	frame.status:SetText(text)
@@ -53,8 +60,8 @@ local function Import()
 	end
 end
 
-local function CreateImport()
-	frame = CreateFrame("Frame", "BeaconImportFrame", UIParent, "ButtonFrameTemplate")
+local function CreateTransfer()
+	frame = CreateFrame("Frame", "BeaconTransferFrame", UIParent, "ButtonFrameTemplate")
 	frame:SetSize(480, 400)
 	frame:SetPoint("CENTER", 40, -20)
 	frame:SetToplevel(true)
@@ -67,14 +74,12 @@ local function CreateImport()
 	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 	frame:SetPortraitToAsset(ns.LOGO)
 	frame:Hide()
-	table.insert(UISpecialFrames, "BeaconImportFrame")
+	table.insert(UISpecialFrames, "BeaconTransferFrame")
 
-	local help = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	help:SetPoint("TOPLEFT", 70, -32)
-	help:SetPoint("RIGHT", -12, 0)
-	help:SetJustifyH("LEFT")
-	help:SetText("One per line: alias, Role or Person, Discord ID, display name (optional).\n"
-		.. GRAY_FONT_COLOR:WrapTextInColorCode("Example: raid, Role, 123456789012345678, Raid Team"))
+	frame.help = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+	frame.help:SetPoint("TOPLEFT", 70, -32)
+	frame.help:SetPoint("RIGHT", -12, 0)
+	frame.help:SetJustifyH("LEFT")
 
 	local inset = frame.Inset
 	frame.input = CreateFrame("Frame", nil, inset, "ScrollingEditBoxTemplate")
@@ -94,18 +99,31 @@ local function CreateImport()
 	frame.status:SetJustifyH("LEFT")
 	frame.status:SetWordWrap(false)
 
-	local importButton = ns.CreateButton(frame, "Import", 96, Import)
-	importButton:SetPoint("BOTTOMRIGHT", -6, 4)
+	frame.importButton = ns.CreateButton(frame, "Import", 96, Import)
+	frame.importButton:SetPoint("BOTTOMRIGHT", -6, 4)
 end
 
--- Opens the import window for which ("guild" or "personal").
-function ns.OpenImport(which)
+-- Opens the window. mode is "import" or "export"; which is "guild" or "personal".
+function ns.OpenTransfer(mode, which)
 	if not frame then
-		CreateImport()
+		CreateTransfer()
 	end
 	target = which
-	frame:SetTitle("Import into your " .. LIST_NAMES[which])
+	local editBox = frame.input:GetEditBox()
 	frame.status:SetText("")
+	frame.importButton:SetShown(mode == "import")
+	if mode == "import" then
+		frame:SetTitle("Import into your " .. LIST_NAMES[which])
+		frame.help:SetText(IMPORT_HELP)
+		editBox:SetText("")
+	else
+		frame:SetTitle("Export your " .. LIST_NAMES[which])
+		frame.help:SetText(EXPORT_HELP)
+		editBox:SetText(ns.ExportEntries(which))
+	end
 	frame:Show()
-	frame.input:GetEditBox():SetFocus()
+	editBox:SetFocus()
+	if mode == "export" then
+		editBox:HighlightText()
+	end
 end

@@ -6,7 +6,7 @@ local _, ns = ...
 -- two tabs: Personal (the player's own aliases, shown first) and Guild
 -- (shared; officers edit and send it, everyone else reads it). Editable lists
 -- get an editor (alias, display name, Role/Person, Discord ID) and an Import
--- button.
+-- button; every list can be exported.
 -- Built the first time it is opened.
 -- Events: none (refreshed through ns.RefreshManager)
 -- SavedVariables: none (edits go through ns.SaveEntry and ns.DeleteEntry)
@@ -102,7 +102,7 @@ local function CreateRadio(parent, label, value)
 	return radio
 end
 
--- Creates a standard red game button. Also used by the import window.
+-- Creates a standard red game button. Also used by the import and export window.
 function ns.CreateButton(parent, label, width, onClick)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
 	button:SetSize(width, 22)
@@ -232,13 +232,8 @@ local function CreateManager()
 		frame.aliasBox:SetFocus()
 	end)
 	newButton:SetPoint("LEFT", frame.deleteButton, "RIGHT", 4, 0)
-	local importButton = ns.CreateButton(editor, "Import...", 230, function()
-		ns.OpenImport(current)
-	end)
-	importButton:SetPoint("TOPLEFT", saveButton, "BOTTOMLEFT", 0, -6)
-
 	frame.status = editor:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-	frame.status:SetPoint("TOPLEFT", importButton, "BOTTOMLEFT", 0, -10)
+	frame.status:SetPoint("TOPLEFT", saveButton, "BOTTOMLEFT", 0, -10)
 	frame.status:SetPoint("RIGHT")
 	frame.status:SetJustifyH("LEFT")
 
@@ -256,11 +251,32 @@ local function CreateManager()
 	-- Bottom bar
 	frame.count = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
 	frame.count:SetPoint("BOTTOMLEFT", 16, 9)
-	frame.sendButton = ns.CreateButton(frame, "Send to Guild", 140, function()
+	frame.sendButton = ns.CreateButton(frame, "Send to Guild", 120, function()
 		ns.SendList(true)
 		ns.RefreshManager()
 	end)
-	frame.sendButton:SetPoint("BOTTOMRIGHT", -6, 4)
+	frame.exportButton = ns.CreateButton(frame, "Export...", 90, function()
+		ns.OpenTransfer("export", current)
+	end)
+	frame.importButton = ns.CreateButton(frame, "Import...", 90, function()
+		ns.OpenTransfer("import", current)
+	end)
+end
+
+-- Lines up the visible bottom-bar buttons from the right edge.
+local function LayoutBottomButtons()
+	local previous
+	for _, button in ipairs({ frame.sendButton, frame.exportButton, frame.importButton }) do
+		if button:IsShown() then
+			button:ClearAllPoints()
+			if previous then
+				button:SetPoint("RIGHT", previous, "LEFT", -4, 0)
+			else
+				button:SetPoint("BOTTOMRIGHT", -6, 4)
+			end
+			previous = button
+		end
+	end
 end
 
 -- Redraws the window from the shown list. Does nothing while it is closed.
@@ -306,6 +322,9 @@ function ns.RefreshManager()
 	frame.sendButton:SetShown(officerGuildTab)
 	frame.sendButton:SetEnabled(list ~= nil and not ns.IsSending())
 	frame.sendButton:SetText(ns.IsSending() and "Sending..." or "Send to Guild")
+	frame.exportButton:SetEnabled(#entries > 0)
+	frame.importButton:SetShown(editable)
+	LayoutBottomButtons()
 end
 
 function ns.ToggleManager()

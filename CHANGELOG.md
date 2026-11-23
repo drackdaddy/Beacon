@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- New **Export...** button on both tabs: shows the list as text in the import format, selected and ready to copy.
+- **Import...**, **Export...** and **Send to Guild** now sit together on the window's bottom bar.
+
+Made with the assistance of AI.
+
 ## 0.2.1
 
 - The lists window now opens on the **Personal** tab, which is also the first tab.

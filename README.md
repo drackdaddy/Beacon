@@ -9,7 +9,7 @@ Beacon is a free, lightweight addon for **World of Warcraft: Forever** that lets
 - **Readable chat**: Your chat window shows friendly names, and Discord gets the working mention.
 - **Officer-managed guild list**: Officers keep one shared list of members and roles, and Beacon syncs it to every guild member who has the addon. Nobody has to look up Discord IDs or set up aliases themselves.
 - **Personal list**: Everyone can also keep their own aliases, which only they use.
-- **Mass import**: Paste many aliases at once, for example straight from a spreadsheet.
+- **Import and export**: Paste many aliases at once, for example straight from a spreadsheet, or export a list to back it up or copy it elsewhere.
 - **Minimap button**: One click opens your lists.
 - **Lightweight**: Beacon only changes text when you send a guild-chat message. It never posts on its own.
 
@@ -46,7 +46,7 @@ Each list holds up to 500 entries.
 
 To add an alias, fill in the **Alias** (what you type after `@`), a **Display name**, choose **Role** or **Person**, paste the **Discord ID**, and choose **Save**. Click an alias in the list to change or delete it.
 
-## Mass import
+## Import and export
 
 Choose **Import...** on a list you can edit, paste your aliases, one per line, and choose **Import**:
 
@@ -61,6 +61,8 @@ kaerpow, Person, 223456789012345678
 - A leading `@` on the alias is fine, and lines starting with `#` are ignored.
 - Aliases already in the list are updated, and new ones are added.
 - Lines that can't be read are skipped, and their line numbers are shown in chat.
+
+Choose **Export...** on either tab to get the list as text in the same format, already selected. Press **Ctrl+C** to copy it. You can keep it as a backup, share it, or paste it into **Import** on another list or character, for example to copy the guild list into your personal list.
 
 ## For officers
 
