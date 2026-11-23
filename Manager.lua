@@ -3,18 +3,19 @@ local _, ns = ...
 ---------------------------------------------------------------------------
 -- Lists window
 -- /beacon or the minimap button opens a standard Blizzard portrait window with
--- two tabs: Guild (shared; officers edit and send it, everyone else reads it)
--- and Personal (the player's own aliases). Editable lists get an editor
--- (alias, display name, Role/Person, Discord ID) and an Import button.
+-- two tabs: Personal (the player's own aliases, shown first) and Guild
+-- (shared; officers edit and send it, everyone else reads it). Editable lists
+-- get an editor (alias, display name, Role/Person, Discord ID) and an Import
+-- button.
 -- Built the first time it is opened.
 -- Events: none (refreshed through ns.RefreshManager)
 -- SavedVariables: none (edits go through ns.SaveEntry and ns.DeleteEntry)
 ---------------------------------------------------------------------------
 local HIGHLIGHT = "Interface\\QuestFrame\\UI-QuestTitleHighlight"
-local TABS = { "guild", "personal" }
+local TABS = { "personal", "guild" }
 
 local frame
-local current = "guild" -- list shown: "guild" or "personal"
+local current = "personal" -- list shown: "personal" or "guild"
 local selected          -- entry loaded in the editor, or nil for a new one
 local kind = "role"     -- Role/Person choice in the editor
 
@@ -69,7 +70,7 @@ local function Delete()
 	end
 end
 
--- Switches the window to tab index (1 = Guild, 2 = Personal).
+-- Switches the window to tab index (1 = Personal, 2 = Guild).
 local function ShowTab(index)
 	current = TABS[index]
 	PanelTemplates_SetTab(frame, index)
@@ -164,7 +165,7 @@ local function CreateManager()
 	frame.subtitle:SetJustifyH("LEFT")
 
 	-- Bottom tabs. Blizzard's tab helpers find them by the frame's name.
-	for index, label in ipairs({ "Guild", "Personal" }) do
+	for index, label in ipairs({ "Personal", "Guild" }) do
 		local tab = CreateFrame("Button", "BeaconFrameTab" .. index, frame, "PanelTabButtonTemplate")
 		tab:SetID(index)
 		tab:SetText(label)

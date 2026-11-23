@@ -37,10 +37,10 @@ Click the Beacon minimap button, or type `/beacon`, to open your lists. Drag the
 
 ## Your two lists
 
-The window has two tabs:
+The window has two tabs and opens on **Personal**:
 
-- **Guild**: the shared list your officers keep. Everyone else can see it but not change it.
 - **Personal**: your own aliases. You can add, change and delete them, and they're never sent to anyone. If a personal alias has the same name as a guild alias, your personal one is used. Your personal list is shared by all your characters on this account.
+- **Guild**: the shared list your officers keep. Everyone else can see it but not change it.
 
 Each list holds up to 500 entries.
 

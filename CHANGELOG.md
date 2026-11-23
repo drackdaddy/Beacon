@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- The lists window now opens on the **Personal** tab, which is also the first tab.
+
+Made with the assistance of AI.
+
 ## 0.2.0
 
 - New **Personal** list: everyone can keep their own aliases next to the guild list. The window now has **Guild** and **Personal** tabs. Personal aliases win over guild aliases with the same name.
