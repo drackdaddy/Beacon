@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0
+
+- Beacon's lists now live in the game's **Options → AddOns → Beacon** instead of a separate window. The minimap button and `/beacon` open Options straight to that page; during combat it opens as soon as combat ends.
+- **Personal** and **Guild** are now buttons at the top of the page instead of tabs.
+- Fixed an error when switching between the Personal and Guild lists (0.3.2 and 0.3.3).
+
+Made with the assistance of AI.
+
 ## 0.3.3
 
 - The **All / Roles / People** filter and the editor's **Role / Person** choice are now full-size buttons instead of small radio buttons, so they're easier to click. The chosen button stays lit.

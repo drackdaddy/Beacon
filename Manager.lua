@@ -1,25 +1,27 @@
 local _, ns = ...
 
 ---------------------------------------------------------------------------
--- Lists window
--- /beacon or the minimap button opens a standard Blizzard portrait window with
--- two tabs: Personal (the player's own aliases, shown first) and Guild
--- (shared; officers edit and send it, everyone else reads it). Editable lists
--- get an editor (alias, display name, Role/Person, Discord ID) and an Import
--- button; every list can be exported, searched by alias or display name, and
--- filtered to roles or people.
--- Built the first time it is opened.
--- Events: none (refreshed through ns.RefreshManager)
+-- Lists page in Options > AddOns
+-- Beacon's page in the game's Options window, under the AddOns tab. Two views,
+-- chosen with buttons at the top: Personal (the player's own aliases, shown
+-- first) and Guild (shared; officers edit and send it, everyone else reads it).
+-- Editable lists get an editor (alias, display name, Role/Person, Discord ID)
+-- and an Import button; every list can be exported, searched by alias or
+-- display name, and filtered to roles or people.
+-- /beacon and the minimap button open Options straight to this page. Options
+-- can't be opened by an addon during combat, so that waits until combat ends.
+-- Events: PLAYER_LOGIN (registers the page), PLAYER_REGEN_ENABLED (deferred open)
 -- SavedVariables: none (edits go through ns.SaveEntry and ns.DeleteEntry)
 ---------------------------------------------------------------------------
 local HIGHLIGHT = "Interface\\QuestFrame\\UI-QuestTitleHighlight"
-local TABS = { "personal", "guild" }
 
 local frame
+local category             -- the page's entry in Options > AddOns
+local openAfterCombat = false
 local current = "personal" -- list shown: "personal" or "guild"
-local selected          -- entry loaded in the editor, or nil for a new one
-local kind = "role"     -- Role/Person choice in the editor
-local showKind = "all"  -- list filter: "all", "role" or "user"
+local selected             -- entry loaded in the editor, or nil for a new one
+local kind = "role"        -- Role/Person choice in the editor
+local showKind = "all"     -- list filter: "all", "role" or "user"
 
 local function SetStatus(text, color)
 	frame.status:SetText(text or "")
@@ -31,6 +33,13 @@ local function SetKind(value)
 	frame.kindChoice:Select(value)
 end
 
+-- Sets the list filter to "all", "role" or "user" and redraws the list.
+local function SetFilter(value)
+	showKind = value
+	frame.filterChoice:Select(value)
+	ns.RefreshManager()
+end
+
 -- Loads entry into the editor, or clears it for a new entry when entry is nil.
 local function Select(entry)
 	selected = entry
@@ -40,6 +49,15 @@ local function Select(entry)
 	SetKind(entry and entry.kind or "role")
 	SetStatus(nil)
 	ns.RefreshManager()
+end
+
+-- Switches to the "personal" or "guild" list, clearing the search and filter.
+local function ShowView(value)
+	current = value
+	frame.viewChoice:Select(value)
+	frame.search:SetText("")
+	SetFilter("all")
+	Select(nil)
 end
 
 -- Message shown after an edit; guild edits still need sending.
@@ -71,15 +89,6 @@ local function Delete()
 	end
 end
 
--- Switches the window to tab index (1 = Personal, 2 = Guild).
-local function ShowTab(index)
-	current = TABS[index]
-	PanelTemplates_SetTab(frame, index)
-	frame.search:SetText("")
-	SetFilter("all")
-	Select(nil)
-end
-
 -- Creates a gold label with an input box under it. Returns the input box.
 local function CreateInput(parent, label, y, maxLetters)
 	local text = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
@@ -92,13 +101,6 @@ local function CreateInput(parent, label, y, maxLetters)
 	box:SetMaxLetters(maxLetters)
 	box:SetScript("OnEnterPressed", Save)
 	return box
-end
-
--- Sets the list filter to "all", "role" or "user" and redraws the list.
-local function SetFilter(value)
-	showKind = value
-	frame.filterChoice:Select(value)
-	ns.RefreshManager()
 end
 
 -- Creates a standard red game button. Also used by the import and export window.
@@ -164,89 +166,75 @@ local function InitRow(row, entry)
 	end
 end
 
-local function CreateManager()
-	frame = CreateFrame("Frame", "BeaconFrame", UIParent, "ButtonFrameTemplate")
-	frame:SetSize(560, 400)
-	frame:SetPoint("CENTER")
-	frame:SetToplevel(true)
-	frame:SetMovable(true)
-	frame:EnableMouse(true)
-	frame:SetClampedToScreen(true)
-	frame:RegisterForDrag("LeftButton")
-	frame:SetScript("OnDragStart", frame.StartMoving)
-	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-	frame:SetTitle("Beacon")
-	frame:SetPortraitToAsset(ns.LOGO)
+-- Builds the page. Options sizes and positions it, so everything is anchored
+-- to its edges.
+local function CreatePage()
+	frame = CreateFrame("Frame")
 	frame:SetScript("OnShow", function()
-		PlaySound(SOUNDKIT.IG_CHARACTER_INFO_OPEN)
 		ns.RefreshManager()
 	end)
-	frame:SetScript("OnHide", function()
-		PlaySound(SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
-	end)
-	frame:Hide()
-	-- Lets Escape close the window like other game panels.
-	table.insert(UISpecialFrames, "BeaconFrame")
+	-- The lists aren't settings: Options' Okay, Cancel and Defaults leave them alone.
+	local function DoNothing() end
+	frame.OnCommit = DoNothing
+	frame.OnDefault = DoNothing
+	frame.OnRefresh = DoNothing
 
+	-- Header, matching other Options pages
+	local logo = frame:CreateTexture(nil, "ARTWORK")
+	logo:SetSize(32, 32)
+	logo:SetTexture(ns.LOGO)
+	logo:SetPoint("TOPLEFT", 8, -8)
+	local title = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightHuge")
+	title:SetPoint("LEFT", logo, "RIGHT", 8, 0)
+	title:SetText("Beacon")
+	local divider = frame:CreateTexture(nil, "ARTWORK")
+	divider:SetAtlas("Options_HorizontalDivider", true)
+	divider:SetPoint("TOP", 0, -48)
+
+	-- Personal / Guild
+	frame.viewChoice = CreateChoiceRow(frame, { { "personal", "Personal" }, { "guild", "Guild" } }, 120, ShowView)
+	frame.viewChoice.buttons[1]:SetPoint("TOPLEFT", 10, -60)
 	frame.subtitle = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	frame.subtitle:SetPoint("TOPLEFT", 70, -36)
+	frame.subtitle:SetPoint("TOPLEFT", 12, -92)
 	frame.subtitle:SetPoint("RIGHT", -12, 0)
 	frame.subtitle:SetJustifyH("LEFT")
 
-	-- Bottom tabs. Blizzard's tab helpers find them by the frame's name.
-	for index, label in ipairs({ "Personal", "Guild" }) do
-		local tab = CreateFrame("Button", "BeaconFrameTab" .. index, frame, "PanelTabButtonTemplate")
-		tab:SetID(index)
-		tab:SetText(label)
-		tab:SetScript("OnClick", function()
-			PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB)
-			ShowTab(index)
-		end)
-		if index == 1 then
-			tab:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 12, 2)
-		else
-			tab:SetPoint("TOPLEFT", _G["BeaconFrameTab" .. (index - 1)], "TOPRIGHT", 3, 0)
-		end
-		PanelTemplates_TabResize(tab, 0)
-	end
-	PanelTemplates_SetNumTabs(frame, #TABS)
-	PanelTemplates_SetTab(frame, 1)
-
-	-- Search box and alias list
-	local inset = frame.Inset
-	frame.search = CreateFrame("EditBox", nil, inset, "SearchBoxTemplate")
+	-- Search box, filter and alias list
+	frame.search = CreateFrame("EditBox", nil, frame, "SearchBoxTemplate")
 	frame.search:SetSize(266, 20)
-	frame.search:SetPoint("TOPLEFT", 12, -6)
+	frame.search:SetPoint("TOPLEFT", 16, -112)
 	frame.search:SetAutoFocus(false)
 	-- Hooked so the template keeps its own clear button and placeholder handling.
 	frame.search:HookScript("OnTextChanged", function()
 		ns.RefreshManager()
 	end)
 
-	-- Show: All / Roles / People
-	frame.filterChoice = CreateChoiceRow(inset, { { "all", "All" }, { "role", "Roles" }, { "user", "People" } }, 86, SetFilter)
-	frame.filterChoice.buttons[1]:SetPoint("TOPLEFT", 8, -30)
-	SetFilter("all")
+	frame.filterChoice = CreateChoiceRow(frame, { { "all", "All" }, { "role", "Roles" }, { "user", "People" } }, 88, SetFilter)
+	frame.filterChoice.buttons[1]:SetPoint("TOPLEFT", 10, -136)
 
-	local scrollBox = CreateFrame("Frame", nil, inset, "WowScrollBoxList")
-	scrollBox:SetPoint("TOPLEFT", 6, -58)
-	scrollBox:SetPoint("BOTTOMRIGHT", inset, "BOTTOMLEFT", 262, 6)
-	local scrollBar = CreateFrame("EventFrame", nil, inset, "MinimalScrollBar")
-	scrollBar:SetPoint("TOPLEFT", scrollBox, "TOPRIGHT", 6, 0)
-	scrollBar:SetPoint("BOTTOMLEFT", scrollBox, "BOTTOMRIGHT", 6, 0)
+	local listInset = CreateFrame("Frame", nil, frame, "InsetFrameTemplate")
+	listInset:SetPoint("TOPLEFT", 10, -164)
+	listInset:SetPoint("BOTTOMLEFT", 10, 40)
+	listInset:SetWidth(272)
+	local scrollBox = CreateFrame("Frame", nil, listInset, "WowScrollBoxList")
+	scrollBox:SetPoint("TOPLEFT", 4, -4)
+	scrollBox:SetPoint("BOTTOMRIGHT", -18, 4)
+	local scrollBar = CreateFrame("EventFrame", nil, listInset, "MinimalScrollBar")
+	scrollBar:SetPoint("TOPLEFT", scrollBox, "TOPRIGHT", 4, 0)
+	scrollBar:SetPoint("BOTTOMLEFT", scrollBox, "BOTTOMRIGHT", 4, 0)
 	local view = CreateScrollBoxListLinearView()
 	view:SetElementExtent(20)
 	view:SetElementInitializer("Button", InitRow)
 	ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, view)
 	frame.scrollBox = scrollBox
 
-	frame.empty = inset:CreateFontString(nil, "ARTWORK", "GameFontDisable")
+	frame.empty = listInset:CreateFontString(nil, "ARTWORK", "GameFontDisable")
 	frame.empty:SetPoint("CENTER", scrollBox)
 
 	-- Editor for lists the player may edit
-	local editor = CreateFrame("Frame", nil, inset)
-	editor:SetPoint("TOPLEFT", 296, -12)
-	editor:SetPoint("BOTTOMRIGHT", -12, 12)
+	local editor = CreateFrame("Frame", nil, frame)
+	editor:SetPoint("TOPLEFT", 306, -112)
+	editor:SetPoint("BOTTOMRIGHT", -10, 40)
 	frame.editor = editor
 
 	frame.aliasBox = CreateInput(editor, "Alias (typed after @)", 0, 24)
@@ -278,19 +266,19 @@ local function CreateManager()
 	frame.status:SetJustifyH("LEFT")
 
 	-- Read-only note for the guild list
-	frame.info = inset:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-	frame.info:SetPoint("TOPLEFT", 296, -16)
+	frame.info = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+	frame.info:SetPoint("TOPLEFT", 306, -116)
 	frame.info:SetPoint("RIGHT", -16, 0)
 	frame.info:SetJustifyH("LEFT")
 	frame.info:SetSpacing(4)
 	frame.info:SetText("Your guild officers keep this list up to date. Changes arrive automatically.\n\n"
 		.. "Type @ in Guild or Guild Discord chat to pick an alias. Discord receives the real mention, and your chat window shows the name.\n\n"
-		.. "Add your own aliases on the Personal tab.\n\n"
+		.. "Add your own aliases under Personal.\n\n"
 		.. GRAY_FONT_COLOR:WrapTextInColorCode("@everyone and @here are always blocked."))
 
 	-- Bottom bar
 	frame.count = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-	frame.count:SetPoint("BOTTOMLEFT", 16, 9)
+	frame.count:SetPoint("BOTTOMLEFT", 14, 16)
 	frame.sendButton = ns.CreateButton(frame, "Send to Guild", 120, function()
 		ns.SendList(true)
 		ns.RefreshManager()
@@ -301,6 +289,8 @@ local function CreateManager()
 	frame.importButton = ns.CreateButton(frame, "Import...", 90, function()
 		ns.OpenTransfer("import", current)
 	end)
+
+	ShowView("personal")
 end
 
 -- Lines up the visible bottom-bar buttons from the right edge.
@@ -312,16 +302,16 @@ local function LayoutBottomButtons()
 			if previous then
 				button:SetPoint("RIGHT", previous, "LEFT", -4, 0)
 			else
-				button:SetPoint("BOTTOMRIGHT", -6, 4)
+				button:SetPoint("BOTTOMRIGHT", -10, 10)
 			end
 			previous = button
 		end
 	end
 end
 
--- Redraws the window from the shown list. Does nothing while it is closed.
+-- Redraws the page from the shown list. Does nothing while it is not on screen.
 function ns.RefreshManager()
-	if not frame or not frame:IsShown() then
+	if not frame or not frame:IsVisible() then
 		return
 	end
 	local list = ns.GetList(current)
@@ -369,8 +359,7 @@ function ns.RefreshManager()
 	frame.info:SetShown(not editable and guildName ~= nil)
 	frame.deleteButton:SetEnabled(selected ~= nil)
 
-	local officerGuildTab = current == "guild" and editable
-	frame.sendButton:SetShown(officerGuildTab)
+	frame.sendButton:SetShown(current == "guild" and editable)
 	frame.sendButton:SetEnabled(list ~= nil and not ns.IsSending())
 	frame.sendButton:SetText(ns.IsSending() and "Sending..." or "Send to Guild")
 	frame.exportButton:SetEnabled(#entries > 0)
@@ -378,9 +367,25 @@ function ns.RefreshManager()
 	LayoutBottomButtons()
 end
 
-function ns.ToggleManager()
-	if not frame then
-		CreateManager()
+-- Opens Options to Beacon's page, or right after combat if the player is fighting.
+function ns.OpenManager()
+	if InCombatLockdown() then
+		openAfterCombat = true
+		ns.Print("Opens in Options when combat ends.")
+		return
 	end
-	frame:SetShown(not frame:IsShown())
+	Settings.OpenToCategory(category:GetID())
 end
+
+ns.On("PLAYER_LOGIN", function()
+	CreatePage()
+	category = Settings.RegisterCanvasLayoutCategory(frame, "Beacon")
+	Settings.RegisterAddOnCategory(category)
+end)
+
+ns.On("PLAYER_REGEN_ENABLED", function()
+	if openAfterCombat then
+		openAfterCombat = false
+		ns.OpenManager()
+	end
+end)

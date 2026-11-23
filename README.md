@@ -10,7 +10,7 @@ Beacon is a free, lightweight addon for **World of Warcraft: Forever** that lets
 - **Officer-managed guild list**: Officers keep one shared list of members and roles, and Beacon syncs it to every guild member who has the addon. Nobody has to look up Discord IDs or set up aliases themselves.
 - **Personal list**: Everyone can also keep their own aliases, which only they use.
 - **Import and export**: Paste many aliases at once, for example straight from a spreadsheet, or export a list to back it up or copy it elsewhere.
-- **Minimap button**: One click opens your lists.
+- **In the game's Options**: Your lists live under Options → AddOns → Beacon, and the minimap button opens them in one click.
 - **Lightweight**: Beacon only changes text when you send a guild-chat message. It never posts on its own.
 
 ## Install
@@ -33,16 +33,16 @@ Your chat window shows `@Raid Team`, while Discord receives the real role or per
 
 `@everyone` and `@here` are always blocked. Beacon sends them as plain words so nobody pings the whole server by accident.
 
-Click the Beacon minimap button, or type `/beacon`, to open your lists. Drag the button to move it around the minimap. Type `/beacon minimap` to hide or show it.
+Beacon's lists live in the game's **Options → AddOns → Beacon**. Click the Beacon minimap button, or type `/beacon`, to open them there directly. Drag the minimap button to move it around the minimap. Type `/beacon minimap` to hide or show it. If you're in combat, Options opens as soon as combat ends.
 
 ## Your two lists
 
-The window has two tabs and opens on **Personal**:
+Use the **Personal** and **Guild** buttons at the top of Beacon's page to switch lists. It opens on **Personal**:
 
 - **Personal**: your own aliases. You can add, change and delete them, and they're never sent to anyone. If a personal alias has the same name as a guild alias, your personal one is used. Your personal list is shared by all your characters on this account.
 - **Guild**: the shared list your officers keep. Everyone else can see it but not change it.
 
-Each list holds up to 500 entries. Type in the **Search** box above a list to show only aliases or display names that contain what you typed. Under the search box, use the **All**, **Roles** and **People** buttons to list everything, only role mentions or only person mentions. The filter and the search work together, and switching tabs resets both.
+Each list holds up to 500 entries. Type in the **Search** box above a list to show only aliases or display names that contain what you typed. Under the search box, use the **All**, **Roles** and **People** buttons to list everything, only role mentions or only person mentions. The filter and the search work together, and switching lists resets both.
 
 To add an alias, fill in the **Alias** (what you type after `@`), a **Display name**, choose **Role** or **Person**, paste the **Discord ID**, and choose **Save**. Click an alias in the list to change or delete it.
 
@@ -62,13 +62,13 @@ kaerpow, Person, 223456789012345678
 - Aliases already in the list are updated, and new ones are added.
 - Lines that can't be read are skipped, and their line numbers are shown in chat.
 
-Choose **Export...** on either tab to get the list as text in the same format, already selected. Press **Ctrl+C** to copy it. You can keep it as a backup, share it, or paste it into **Import** on another list or character, for example to copy the guild list into your personal list.
+Choose **Export...** on either list to get the list as text in the same format, already selected. Press **Ctrl+C** to copy it. You can keep it as a backup, share it, or paste it into **Import** on another list or character, for example to copy the guild list into your personal list.
 
 ## For officers
 
 Officers are the **Guild Master rank and the rank directly below it**. Only they can edit and import into the guild list, and Beacon only accepts guild lists sent by them.
 
-After editing or importing on the **Guild** tab, choose **Send to Guild** to share your changes with everyone online who has Beacon. Guild members who log in later get the newest list automatically from any officer who is online.
+After editing or importing the **Guild** list, choose **Send to Guild** to share your changes with everyone online who has Beacon. Guild members who log in later get the newest list automatically from any officer who is online.
 
 The list is sent in small pieces about one second apart so it doesn't flood the guild's addon channel. A full 500-entry list takes about two minutes.
 

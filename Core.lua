@@ -304,13 +304,13 @@ end
 
 ---------------------------------------------------------------------------
 -- Slash command
--- /beacon opens the lists window; /beacon minimap shows or hides the minimap button.
+-- /beacon opens Beacon in Options > AddOns; /beacon minimap shows or hides the minimap button.
 ---------------------------------------------------------------------------
 SLASH_BEACON1 = "/beacon"
 SlashCmdList.BEACON = function(input)
 	if strtrim(input):lower() == "minimap" then
 		ns.ToggleMinimapButton()
 	else
-		ns.ToggleManager()
+		ns.OpenManager()
 	end
 end
