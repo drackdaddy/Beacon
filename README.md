@@ -12,7 +12,9 @@ Beacon is a free, lightweight addon for **World of Warcraft: Forever** that lets
 
 ## Install
 
-Copy the `Beacon` folder into your Forever client's `Interface/AddOns` folder, then log in or type `/reload`.
+Put this repository's files in a folder named `Beacon` inside your Forever client's `Interface/AddOns` folder, so the path is `Interface/AddOns/Beacon/Beacon.toc`. Then log in or type `/reload`.
+
+If you download the repository as a ZIP from GitHub, the folder inside is named `Beacon-main`. Rename it to `Beacon`, or the game won't load the addon.
 
 Your guild's Discord connection must already be set up: each player turns on Discord in the game's Social options, and a guild leader or officer links the guild's Discord channel in the guild settings.
 
