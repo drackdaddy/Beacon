@@ -6,7 +6,8 @@ local _, ns = ...
 -- two tabs: Personal (the player's own aliases, shown first) and Guild
 -- (shared; officers edit and send it, everyone else reads it). Editable lists
 -- get an editor (alias, display name, Role/Person, Discord ID) and an Import
--- button; every list can be exported and searched by alias or display name.
+-- button; every list can be exported, searched by alias or display name, and
+-- filtered to roles or people.
 -- Built the first time it is opened.
 -- Events: none (refreshed through ns.RefreshManager)
 -- SavedVariables: none (edits go through ns.SaveEntry and ns.DeleteEntry)
@@ -18,6 +19,7 @@ local frame
 local current = "personal" -- list shown: "personal" or "guild"
 local selected          -- entry loaded in the editor, or nil for a new one
 local kind = "role"     -- Role/Person choice in the editor
+local showKind = "all"  -- list filter: "all", "role" or "user"
 
 local function SetStatus(text, color)
 	frame.status:SetText(text or "")
@@ -75,6 +77,7 @@ local function ShowTab(index)
 	current = TABS[index]
 	PanelTemplates_SetTab(frame, index)
 	frame.search:SetText("")
+	SetFilter("all")
 	Select(nil)
 end
 
@@ -92,15 +95,23 @@ local function CreateInput(parent, label, y, maxLetters)
 	return box
 end
 
-local function CreateRadio(parent, label, value)
+-- Creates a small radio button with a label to its right; onClick runs when chosen.
+local function CreateRadio(parent, label, onClick)
 	local radio = CreateFrame("CheckButton", nil, parent, "UIRadioButtonTemplate")
 	local text = radio:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 	text:SetPoint("LEFT", radio, "RIGHT", 4, 0)
 	text:SetText(label)
-	radio:SetScript("OnClick", function()
-		SetKind(value)
-	end)
+	radio:SetScript("OnClick", onClick)
 	return radio
+end
+
+-- Sets the list filter to "all", "role" or "user" and redraws the list.
+local function SetFilter(value)
+	showKind = value
+	for filterValue, radio in pairs(frame.filterRadios) do
+		radio:SetChecked(filterValue == value)
+	end
+	ns.RefreshManager()
 end
 
 -- Creates a standard red game button. Also used by the import and export window.
@@ -195,8 +206,24 @@ local function CreateManager()
 		ns.RefreshManager()
 	end)
 
+	-- Show: All / Roles / People
+	local showLabel = inset:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+	showLabel:SetPoint("TOPLEFT", 14, -34)
+	showLabel:SetText("Show:")
+	frame.filterRadios = {}
+	local previous = showLabel
+	for _, option in ipairs({ { "all", "All" }, { "role", "Roles" }, { "user", "People" } }) do
+		local radio = CreateRadio(inset, option[2], function()
+			SetFilter(option[1])
+		end)
+		radio:SetPoint("LEFT", previous, "RIGHT", previous == showLabel and 8 or 50, 0)
+		frame.filterRadios[option[1]] = radio
+		previous = radio
+	end
+	SetFilter("all")
+
 	local scrollBox = CreateFrame("Frame", nil, inset, "WowScrollBoxList")
-	scrollBox:SetPoint("TOPLEFT", 6, -32)
+	scrollBox:SetPoint("TOPLEFT", 6, -52)
 	scrollBox:SetPoint("BOTTOMRIGHT", inset, "BOTTOMLEFT", 262, 6)
 	local scrollBar = CreateFrame("EventFrame", nil, inset, "MinimalScrollBar")
 	scrollBar:SetPoint("TOPLEFT", scrollBox, "TOPRIGHT", 6, 0)
@@ -227,9 +254,9 @@ local function CreateManager()
 	local typeLabel = editor:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
 	typeLabel:SetPoint("TOPLEFT", 0, -138)
 	typeLabel:SetText("Mentions a")
-	frame.roleRadio = CreateRadio(editor, "Role", "role")
+	frame.roleRadio = CreateRadio(editor, "Role", function() SetKind("role") end)
 	frame.roleRadio:SetPoint("TOPLEFT", typeLabel, "BOTTOMLEFT", 2, -4)
-	frame.personRadio = CreateRadio(editor, "Person", "user")
+	frame.personRadio = CreateRadio(editor, "Person", function() SetKind("user") end)
 	frame.personRadio:SetPoint("LEFT", frame.roleRadio, "RIGHT", 60, 0)
 
 	local saveButton = ns.CreateButton(editor, "Save", 74, Save)
@@ -300,11 +327,13 @@ function ns.RefreshManager()
 		selected = nil
 	end
 
-	-- Show only entries whose alias or display name contains the search text.
+	-- Show only entries of the chosen kind whose alias or display name contains the search text.
 	local search = strtrim(frame.search:GetText()):lower()
 	local shown = {}
 	for _, entry in ipairs(entries) do
-		if search == "" or entry.alias:find(search, 1, true) or entry.name:lower():find(search, 1, true) then
+		local kindMatches = showKind == "all" or entry.kind == showKind
+		local searchMatches = search == "" or entry.alias:find(search, 1, true) or entry.name:lower():find(search, 1, true)
+		if kindMatches and searchMatches then
 			shown[#shown + 1] = entry
 		end
 	end

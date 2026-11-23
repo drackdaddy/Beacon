@@ -42,7 +42,7 @@ The window has two tabs and opens on **Personal**:
 - **Personal**: your own aliases. You can add, change and delete them, and they're never sent to anyone. If a personal alias has the same name as a guild alias, your personal one is used. Your personal list is shared by all your characters on this account.
 - **Guild**: the shared list your officers keep. Everyone else can see it but not change it.
 
-Each list holds up to 500 entries. Type in the **Search** box above a list to show only aliases or display names that contain what you typed. Switching tabs clears the search.
+Each list holds up to 500 entries. Type in the **Search** box above a list to show only aliases or display names that contain what you typed. Under the search box, choose **Show: All**, **Roles** or **People** to list only role mentions or only person mentions. The filter and the search work together, and switching tabs resets both.
 
 To add an alias, fill in the **Alias** (what you type after `@`), a **Display name**, choose **Role** or **Person**, paste the **Discord ID**, and choose **Save**. Click an alias in the list to change or delete it.
 
