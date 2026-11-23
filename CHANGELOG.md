@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- New **Search** box above each list: shows only aliases or display names containing the typed text.
+
+Made with the assistance of AI.
+
 ## 0.3.0
 
 - New **Export...** button on both tabs: shows the list as text in the import format, selected and ready to copy.

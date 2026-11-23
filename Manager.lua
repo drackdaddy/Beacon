@@ -6,7 +6,7 @@ local _, ns = ...
 -- two tabs: Personal (the player's own aliases, shown first) and Guild
 -- (shared; officers edit and send it, everyone else reads it). Editable lists
 -- get an editor (alias, display name, Role/Person, Discord ID) and an Import
--- button; every list can be exported.
+-- button; every list can be exported and searched by alias or display name.
 -- Built the first time it is opened.
 -- Events: none (refreshed through ns.RefreshManager)
 -- SavedVariables: none (edits go through ns.SaveEntry and ns.DeleteEntry)
@@ -74,6 +74,7 @@ end
 local function ShowTab(index)
 	current = TABS[index]
 	PanelTemplates_SetTab(frame, index)
+	frame.search:SetText("")
 	Select(nil)
 end
 
@@ -183,10 +184,19 @@ local function CreateManager()
 	PanelTemplates_SetNumTabs(frame, #TABS)
 	PanelTemplates_SetTab(frame, 1)
 
-	-- Alias list
+	-- Search box and alias list
 	local inset = frame.Inset
+	frame.search = CreateFrame("EditBox", nil, inset, "SearchBoxTemplate")
+	frame.search:SetSize(266, 20)
+	frame.search:SetPoint("TOPLEFT", 12, -6)
+	frame.search:SetAutoFocus(false)
+	-- Hooked so the template keeps its own clear button and placeholder handling.
+	frame.search:HookScript("OnTextChanged", function()
+		ns.RefreshManager()
+	end)
+
 	local scrollBox = CreateFrame("Frame", nil, inset, "WowScrollBoxList")
-	scrollBox:SetPoint("TOPLEFT", 6, -6)
+	scrollBox:SetPoint("TOPLEFT", 6, -32)
 	scrollBox:SetPoint("BOTTOMRIGHT", inset, "BOTTOMLEFT", 262, 6)
 	local scrollBar = CreateFrame("EventFrame", nil, inset, "MinimalScrollBar")
 	scrollBar:SetPoint("TOPLEFT", scrollBox, "TOPRIGHT", 6, 0)
@@ -199,7 +209,6 @@ local function CreateManager()
 
 	frame.empty = inset:CreateFontString(nil, "ARTWORK", "GameFontDisable")
 	frame.empty:SetPoint("CENTER", scrollBox)
-	frame.empty:SetText("No aliases yet.")
 
 	-- Editor for lists the player may edit
 	local editor = CreateFrame("Frame", nil, inset)
@@ -291,15 +300,20 @@ function ns.RefreshManager()
 		selected = nil
 	end
 
-	local sorted = {}
-	for i, entry in ipairs(entries) do
-		sorted[i] = entry
+	-- Show only entries whose alias or display name contains the search text.
+	local search = strtrim(frame.search:GetText()):lower()
+	local shown = {}
+	for _, entry in ipairs(entries) do
+		if search == "" or entry.alias:find(search, 1, true) or entry.name:lower():find(search, 1, true) then
+			shown[#shown + 1] = entry
+		end
 	end
-	table.sort(sorted, function(a, b)
+	table.sort(shown, function(a, b)
 		return a.alias < b.alias
 	end)
-	frame.scrollBox:SetDataProvider(CreateDataProvider(sorted), ScrollBoxConstants.RetainScrollPosition)
-	frame.empty:SetShown(#entries == 0)
+	frame.scrollBox:SetDataProvider(CreateDataProvider(shown), ScrollBoxConstants.RetainScrollPosition)
+	frame.empty:SetText(#entries == 0 and "No aliases yet." or "No matches.")
+	frame.empty:SetShown(#shown == 0)
 
 	local guildName = GetGuildInfo("player")
 	if current == "personal" then
@@ -312,7 +326,11 @@ function ns.RefreshManager()
 	else
 		frame.subtitle:SetText(guildName)
 	end
-	frame.count:SetText(string.format("%d / %d entries", #entries, ns.MAX_ENTRIES))
+	if #shown < #entries then
+		frame.count:SetText(string.format("%d of %d shown", #shown, #entries))
+	else
+		frame.count:SetText(string.format("%d / %d entries", #entries, ns.MAX_ENTRIES))
+	end
 
 	frame.editor:SetShown(editable)
 	frame.info:SetShown(not editable and guildName ~= nil)
