@@ -38,14 +38,12 @@ Beacon lets you @mention Discord roles and people from World of Warcraft: Foreve
 
 ### Discord companion tool
 
-- A Windows tool in the `Companion` folder reads your Discord server's members and roles with your own Discord bot.
-- It asks for the bot token on first run and keeps it in Windows Credential Manager, never in a file.
+- Works with [Beacon Discord Sync](https://github.com/drackdaddy/BeaconDiscordSync), a separate Windows tool that reads your Discord server's members and roles with your own Discord bot.
 - The export can go straight into Beacon (type `/reload` in game), be posted in a Discord channel, or both.
 - Importing matches by Discord ID:
   - New people and roles are added.
   - Nickname changes update display names, and everyone keeps their alias.
   - People who left the server, and deleted roles, are removed.
-- Names are cleaned up so they can be typed in game. Accents and fancy letters become plain letters, and emoji are dropped.
 
 ### Interface
 

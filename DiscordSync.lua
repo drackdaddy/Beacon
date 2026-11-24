@@ -58,7 +58,7 @@ StaticPopupDialogs.BEACON_DISCORD_IMPORT_OFFICER = MakeDialog(true)
 function ns.OfferDiscordImport()
 	local export = ns.discordExport
 	if not export then
-		ns.Print("No Discord export found. Run Companion\\BeaconDiscordExport.bat in the Beacon folder, then /reload.")
+		ns.Print("No Discord export found. Run the Beacon Discord Sync companion tool (github.com/drackdaddy/BeaconDiscordSync), then /reload.")
 		return
 	end
 	local text = string.format("Beacon: Discord export from %s\n%d %s and %d %s, made %s.\n\n"
