@@ -4,8 +4,9 @@ local _, ns = ...
 -- Lists page in Options > AddOns
 -- Beacon's page in the game's Options window, under the AddOns tab. Views,
 -- chosen with buttons at the top: Personal (the player's own aliases, shown
--- first), Guild (shared; officers edit it, everyone else reads it) and, for
--- officers only, Log (guild list syncs and changes, newest first).
+-- first), Guild (shared; officers edit it, everyone else reads it), Info
+-- (what the Beacon Discord Sync companion tool is, with a link to copy) and,
+-- for officers only, Log (guild list syncs and changes, newest first).
 -- Editable lists get an editor (alias, display name, Role/Person, Discord ID)
 -- and an Import button; every list can be exported, searched by alias or
 -- display name, and filtered to roles or people.
@@ -15,11 +16,12 @@ local _, ns = ...
 -- SavedVariables: none (edits go through ns.SaveEntry and ns.DeleteEntry)
 ---------------------------------------------------------------------------
 local HIGHLIGHT = "Interface\\QuestFrame\\UI-QuestTitleHighlight"
+local COMPANION_URL = "https://github.com/drackdaddy/BeaconDiscordSync"
 
 local frame
 local category             -- the page's entry in Options > AddOns
 local openAfterCombat = false
-local current = "personal" -- view shown: "personal", "guild" or "log"
+local current = "personal" -- view shown: "personal", "guild", "info" or "log"
 local selected             -- entry loaded in the editor, or nil for a new one
 local kind = "role"        -- Role/Person choice in the editor
 local showKind = "all"     -- list filter: "all", "role" or "user"
@@ -52,7 +54,7 @@ local function Select(entry)
 	ns.RefreshManager()
 end
 
--- Switches to the "personal", "guild" or "log" view, clearing the search and filter.
+-- Switches to the "personal", "guild", "info" or "log" view, clearing the search and filter.
 local function ShowView(value)
 	current = value
 	frame.viewChoice:Select(value)
@@ -244,8 +246,8 @@ local function CreatePage()
 	divider:SetAtlas("Options_HorizontalDivider", true)
 	divider:SetPoint("TOP", 0, -48)
 
-	-- Personal / Guild
-	frame.viewChoice = CreateChoiceRow(frame, { { "personal", "Personal" }, { "guild", "Guild" }, { "log", "Log" } }, 120, ShowView)
+	-- Personal / Guild / Info / Log. Log is last so hiding it from members leaves no gap.
+	frame.viewChoice = CreateChoiceRow(frame, { { "personal", "Personal" }, { "guild", "Guild" }, { "info", "Info" }, { "log", "Log" } }, 120, ShowView)
 	frame.viewChoice.buttons[1]:SetPoint("TOPLEFT", 10, -60)
 	frame.subtitle = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 	frame.subtitle:SetPoint("TOPLEFT", 12, -92)
@@ -364,6 +366,49 @@ local function CreatePage()
 	frame.logEmpty:SetPoint("CENTER", logBox)
 	frame.logEmpty:SetText("No guild list activity yet.")
 
+	-- Info view: what the companion tool does, and its link. The game can't open
+	-- web links, so the link sits in a box that selects itself for copying.
+	local infoView = CreateFrame("Frame", nil, frame)
+	infoView:SetAllPoints()
+	frame.infoView = infoView
+	local infoText = infoView:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+	infoText:SetPoint("TOPLEFT", 16, -116)
+	infoText:SetPoint("RIGHT", -16, 0)
+	infoText:SetJustifyH("LEFT")
+	infoText:SetSpacing(4)
+	infoText:SetText("Beacon Discord Sync is a free Windows tool, downloaded separately, that fills your Beacon lists "
+		.. "from your Discord server. It reads the server's members and roles with your own Discord bot and turns them "
+		.. "into aliases, so nobody has to look up Discord IDs by hand.\n\n"
+		.. "Run it again whenever people join or leave. It writes its export into the Beacon folder, so you type /reload "
+		.. "and choose a list, or posts it in a Discord channel for you to paste into Import. People who left are "
+		.. "removed, and everyone keeps their alias.\n\n"
+		.. "Download it and read the setup steps here:")
+	local linkBox = CreateFrame("EditBox", nil, infoView, "InputBoxTemplate")
+	linkBox:SetSize(360, 20)
+	linkBox:SetPoint("TOPLEFT", infoText, "BOTTOMLEFT", 6, -8)
+	linkBox:SetAutoFocus(false)
+	linkBox:SetText(COMPANION_URL)
+	linkBox:SetCursorPosition(0)
+	-- Puts the link back if it was typed over, and selects it for Ctrl+C.
+	local function SelectLink(self)
+		self:SetText(COMPANION_URL)
+		self:HighlightText()
+	end
+	local function ClearFocus(self)
+		self:ClearFocus()
+	end
+	linkBox:SetScript("OnEditFocusGained", SelectLink)
+	linkBox:SetScript("OnTextChanged", function(self, userInput)
+		if userInput then
+			SelectLink(self)
+		end
+	end)
+	linkBox:SetScript("OnEnterPressed", ClearFocus)
+	linkBox:SetScript("OnEscapePressed", ClearFocus)
+	local copyHint = infoView:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+	copyHint:SetPoint("TOPLEFT", linkBox, "BOTTOMLEFT", -6, -6)
+	copyHint:SetText("Click the link, press Ctrl+C to copy it, then paste it into your web browser.")
+
 	ShowView("personal")
 end
 
@@ -389,15 +434,21 @@ function ns.RefreshManager()
 		return
 	end
 	local officer = ns.IsOfficer()
-	frame.viewChoice.buttons[3]:SetShown(officer)
+	frame.viewChoice.buttons[4]:SetShown(officer)
 	if current == "log" and not officer then
 		ShowView("personal")
 		return
 	end
-	frame.listView:SetShown(current ~= "log")
+	frame.listView:SetShown(current == "personal" or current == "guild")
 	frame.logView:SetShown(current == "log")
+	frame.infoView:SetShown(current == "info")
 	if current == "log" then
 		RefreshLog()
+		return
+	end
+	if current == "info" then
+		frame.subtitle:SetText("Keep your lists in step with your Discord server.")
+		frame.subtitle:SetTextColor(HIGHLIGHT_FONT_COLOR:GetRGB())
 		return
 	end
 

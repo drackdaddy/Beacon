@@ -48,6 +48,7 @@ Beacon lets you @mention Discord roles and people from World of Warcraft: Foreve
 ### Interface
 
 - Lives in the game's **Options → AddOns → Beacon**, styled like other Options pages.
+- **Info** view explaining the Beacon Discord Sync companion tool, with its link ready to copy.
 - Minimap button with the Beacon logo. Click to open, drag to move. `/beacon minimap` hides or shows it.
 - Commands:
   - `/beacon` opens Beacon in Options.

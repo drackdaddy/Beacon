@@ -102,7 +102,7 @@ If a role mention reaches Discord but nobody is notified, turn on **Allow anyone
 
 ## Discord companion tool
 
-[Beacon Discord Sync](https://github.com/drackdaddy/BeaconDiscordSync) is a small, separate Windows tool that reads your Discord server's members and roles with your own Discord bot and turns them into Beacon aliases. The addon itself can't connect to Discord, so the tool runs outside the game. Its page explains how to set up the bot and run it.
+[Beacon Discord Sync](https://github.com/drackdaddy/BeaconDiscordSync) is a small, separate Windows tool that reads your Discord server's members and roles with your own Discord bot and turns them into Beacon aliases. The addon itself can't connect to Discord, so the tool runs outside the game. Its page explains how to set up the bot and run it. Beacon's **Info** button, next to **Personal** and **Guild**, explains the tool in game and has its link ready to copy.
 
 The tool can send its export to Beacon in two ways:
 
