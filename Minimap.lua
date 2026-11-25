@@ -28,7 +28,8 @@ local function OnDragUpdate()
 end
 
 local function CreateMinimapButton()
-	button = CreateFrame("Button", nil, Minimap)
+	-- Named because minimap-button collectors (such as OneForAll) skip unnamed buttons.
+	button = CreateFrame("Button", "BeaconMinimapButton", Minimap)
 	button:SetSize(31, 31)
 	button:SetFrameStrata("MEDIUM")
 	button:SetFrameLevel(8)
