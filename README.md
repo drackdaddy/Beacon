@@ -130,3 +130,7 @@ Beacon is written from scratch. The Beacon logo is original artwork made for thi
 Beacon is not affiliated with Discord or Blizzard Entertainment.
 
 This addon was made with the assistance of AI.
+
+## License
+
+Beacon is released under the [MIT License](LICENSE). You're free to use, copy, change and share the code, as long as the license notice stays with it.
