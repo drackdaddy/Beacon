@@ -45,7 +45,7 @@ Use the **Personal** and **Guild** buttons at the top of Beacon's page to switch
 
 Each list holds up to 500 entries. Type in the **Search** box above a list to show only aliases or display names that contain what you typed. Under the search box, use the **All**, **Roles** and **People** buttons to list everything, only role mentions or only person mentions. The filter and the search work together, and switching lists resets both.
 
-To add an alias, fill in the **Alias** (what you type after `@`), a **Display name**, choose **Role** or **Person**, paste the **Discord ID**, and choose **Save**. Click an alias in the list to change or delete it.
+To add an alias, fill in the **Alias** (what you type after `@`), a **Display name**, choose **Role** or **Person**, paste the **Discord ID**, and choose **Save**. Click an alias card to change or delete it, or choose **+ New** to start a fresh one.
 
 ## Import and export
 

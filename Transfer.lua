@@ -21,6 +21,15 @@ local EXPORT_HELP = "Press Ctrl+C to copy. Paste it into Import on any list or c
 local frame
 local target -- list being imported into: "guild" or "personal"
 
+-- Creates a standard red game button, matching the window's Blizzard frame.
+local function CreateButton(parent, label, width, onClick)
+	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+	button:SetSize(width, 22)
+	button:SetText(label)
+	button:SetScript("OnClick", onClick)
+	return button
+end
+
 local function SetStatus(text, color)
 	frame.status:SetText(text)
 	frame.status:SetTextColor(color:GetRGB())
@@ -116,7 +125,7 @@ local function CreateTransfer()
 	frame.status:SetJustifyH("LEFT")
 	frame.status:SetWordWrap(false)
 
-	frame.importButton = ns.CreateButton(frame, "Import", 96, Import)
+	frame.importButton = CreateButton(frame, "Import", 96, Import)
 	frame.importButton:SetPoint("BOTTOMRIGHT", -6, 4)
 end
 
