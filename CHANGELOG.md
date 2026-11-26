@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1 - MIT License
+
+- Beacon is now open source under the MIT License. Anyone can use, copy, change and share the code, as long as the license notice stays with it.
+- New `LICENSE` file in the addon folder.
+- `Beacon.toc` now lists the license.
+- The README has a new **License** section that links to the license file.
+- Nothing changes in game, and there are no settings or saved data to update.
+- Made with the assistance of AI.
+
 ## 1.1.0 - Discord-style menu
 
 - Beacon now has its own window instead of a page in Options. Drag it by its top bar and press Escape to close it. `/beacon` and the minimap button open or close it, even in combat.
