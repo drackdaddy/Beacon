@@ -2,17 +2,19 @@ local _, ns = ...
 
 ---------------------------------------------------------------------------
 -- Beacon window
--- Beacon's own movable window, styled after Discord: dark panels, a
--- segmented control for the views, and each alias shown as a card with a round initial and a ROLE or PERSON tag.
+-- Beacon's own movable window, styled after Discord: rounded dark panels, a
+-- segmented control for the views, and each alias shown as a card with a
+-- round initial and a ROLE or PERSON tag, two cards to a row.
 -- Views: Personal (the player's own aliases, shown first), Guild (shared;
 -- officers edit it, everyone else reads it), Info (what the Beacon Discord
 -- Sync companion tool is, with a link to copy) and, for officers only, Log
 -- (guild list syncs and changes, newest first).
--- Editable lists get a side panel editor (alias, display name, Discord ID,
--- Role/Person) and an Import button; every list can be exported, searched by
--- alias or display name, and filtered to roles or people.
+-- Editable lists get a "+ New alias" card, a side panel editor (alias,
+-- display name, Discord ID, Role/Person) and an Import button; every list can
+-- be exported, searched by alias or display name, and filtered to roles or people.
 -- /beacon and the minimap button open and close it. It's a plain window with
--- no protected parts, so it opens in combat too. Escape closes it.
+-- no protected parts, so it opens in combat too. Drag the header to move it;
+-- Escape closes it.
 -- Events: none
 -- SavedVariables: none (edits go through ns.SaveEntry and ns.DeleteEntry)
 ---------------------------------------------------------------------------
@@ -30,6 +32,7 @@ local PANEL = CreateColor(0.169, 0.176, 0.192)
 local FIELD = CreateColor(0.118, 0.122, 0.133)
 local CHOSEN = CreateColor(0.251, 0.259, 0.286)
 local CARD_BORDER = CreateColor(0.122, 0.125, 0.137)
+local NEW_BORDER = CreateColor(0.306, 0.314, 0.345)
 local BLURPLE = CreateColor(0.345, 0.396, 0.949)
 local DANGER = CreateColor(0.855, 0.216, 0.235)
 local NEUTRAL = CreateColor(0.306, 0.314, 0.345)
@@ -46,8 +49,14 @@ local PEOPLE_COLORS = {
 	CreateColor(0.102, 0.600, 0.749),
 }
 
-local WINDOW_WIDTH, WINDOW_HEIGHT = 680, 560
-local TITLE_HEIGHT = 30
+-- Window layout, in pixels.
+local WINDOW_WIDTH, WINDOW_HEIGHT = 820, 600
+local PAD = 16
+local CARD_WIDTH, CARD_HEIGHT, CARD_GAP = 232, 56, 10
+local CARDS_WIDTH = CARD_WIDTH * 2 + CARD_GAP
+local CONTENT_TOP = -102   -- below the header and the search row
+local CONTENT_BOTTOM = 52  -- above the bottom bar
+local NEW_CARD = {}        -- stands in the card list for the "+ New alias" card
 
 local frame
 local current = "personal" -- view shown: "personal", "guild", "info" or "log"
@@ -68,20 +77,27 @@ local function Tint(texture, color)
 	texture:SetVertexColor(color:GetRGB())
 end
 
--- Adds a faint light overlay that the game shows while the mouse is over button.
+-- Adds a faint rounded light that the game shows while the mouse is over button.
 local function AddHover(button, anchor)
 	local hover = button:CreateTexture(nil, "HIGHLIGHT")
 	hover:SetAllPoints(anchor or button)
 	Fill(hover, HIGHLIGHT_FONT_COLOR, 0.06)
 end
 
+-- Creates a rounded background texture covering owner, inset by inset pixels.
+local function AddBackground(owner, color, inset, subLevel)
+	local background = owner:CreateTexture(nil, "BACKGROUND", nil, subLevel)
+	background:SetPoint("TOPLEFT", inset or 0, -(inset or 0))
+	background:SetPoint("BOTTOMRIGHT", -(inset or 0), inset or 0)
+	Fill(background, color)
+	return background
+end
+
 -- Creates a flat Discord-style button filled with color.
 local function CreateFlatButton(parent, label, width, color, onClick)
 	local button = CreateFrame("Button", nil, parent)
-	button:SetSize(width, 28)
-	local background = button:CreateTexture(nil, "BACKGROUND")
-	background:SetAllPoints()
-	Fill(background, color)
+	button:SetSize(width, 30)
+	AddBackground(button, color)
 	AddHover(button)
 	button:SetNormalFontObject(GameFontHighlight)
 	button:SetText(label)
@@ -98,37 +114,34 @@ end
 -- Creates a flat text box on a dark field, with no border.
 local function CreateField(parent)
 	local box = CreateFrame("EditBox", nil, parent)
-	box:SetHeight(28)
+	box:SetHeight(30)
 	box:SetFontObject(ChatFontNormal)
 	box:SetTextInsets(10, 10, 0, 0)
 	box:SetAutoFocus(false)
-	local background = box:CreateTexture(nil, "BACKGROUND")
-	background:SetAllPoints()
-	Fill(background, FIELD)
+	AddBackground(box, FIELD)
 	box:SetScript("OnEscapePressed", box.ClearFocus)
 	return box
 end
 
--- Creates a Discord-style segmented control: buttons on a dark strip where the
--- chosen one is lit. options = { { value, label }, ... }; onChoose(value) runs
--- on click. The caller anchors the returned row. row:Select(value) marks a
--- button as chosen; row:Layout() closes the gap after showing or hiding one.
-local function CreateSegmented(parent, options, width, onChoose)
+-- Creates a Discord-style segmented control where the chosen button is lit.
+-- options = { { value, label }, ... }; onChoose(value) runs on click. With
+-- strip, the buttons sit on a dark strip. The caller anchors the returned row.
+-- row:Select(value) marks a button as chosen; row:Layout() closes the gap
+-- after showing or hiding one.
+local function CreateSegmented(parent, options, width, onChoose, strip)
 	local row = CreateFrame("Frame", nil, parent)
-	row:SetHeight(30)
-	local background = row:CreateTexture(nil, "BACKGROUND")
-	background:SetAllPoints()
-	Fill(background, FIELD)
+	row:SetHeight(32)
+	if strip then
+		AddBackground(row, FIELD)
+	end
 	row.buttons = {}
 	for i, option in ipairs(options) do
 		local button = CreateFrame("Button", nil, row)
-		button:SetSize(width, 24)
+		button:SetSize(width, 26)
 		button.value = option[1]
-		button.chosen = button:CreateTexture(nil, "BACKGROUND")
-		button.chosen:SetAllPoints()
-		Fill(button.chosen, CHOSEN)
+		button.chosen = AddBackground(button, CHOSEN)
 		AddHover(button)
-		button:SetNormalFontObject(GameFontHighlightSmall)
+		button:SetNormalFontObject(GameFontHighlight)
 		button:SetText(option[2])
 		button:SetScript("OnClick", function()
 			onChoose(option[1])
@@ -184,18 +197,16 @@ end
 -- Creates a gray uppercase label in an editor panel, y pixels below its top.
 local function CreateLabel(parent, text, y)
 	local label = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-	label:SetPoint("TOPLEFT", 16, y)
+	label:SetPoint("TOPLEFT", PAD, y)
 	label:SetText(text:upper())
 	label:SetTextColor(MUTED_TEXT:GetRGB())
 	return label
 end
 
--- Creates a panel with Discord's darker card color.
+-- Creates a rounded panel in Discord's darker card color.
 local function CreatePanel(parent)
 	local panel = CreateFrame("Frame", nil, parent)
-	local background = panel:CreateTexture(nil, "BACKGROUND")
-	background:SetAllPoints()
-	Fill(background, PANEL)
+	AddBackground(panel, PANEL)
 	return panel
 end
 
@@ -279,56 +290,88 @@ end
 local function CreateInput(parent, label, y, maxLetters)
 	local text = CreateLabel(parent, label, y)
 	local box = CreateField(parent)
-	box:SetPoint("TOPLEFT", text, "BOTTOMLEFT", 0, -4)
-	box:SetPoint("RIGHT", -16, 0)
+	box:SetPoint("TOPLEFT", text, "BOTTOMLEFT", 0, -6)
+	box:SetPoint("RIGHT", -PAD, 0)
 	box:SetMaxLetters(maxLetters)
 	box:SetScript("OnEnterPressed", Save)
 	return box
 end
 
--- Fills one alias card. Cards are created plain and set up the first time they are used.
-local function InitCard(card, entry)
-	if not card.alias then
-		card.border = card:CreateTexture(nil, "BACKGROUND")
-		card.border:SetAllPoints()
-		Fill(card.border, CARD_BORDER)
-		local background = card:CreateTexture(nil, "BORDER")
-		background:SetPoint("TOPLEFT", 1, -1)
-		background:SetPoint("BOTTOMRIGHT", -1, 1)
-		Fill(background, PANEL)
-		AddHover(card, background)
-		card.avatar, card.letter = CreateAvatar(card, 32, "GameFontHighlight")
-		card.avatar:SetPoint("LEFT", 10, 0)
-		card.chip = card:CreateTexture(nil, "ARTWORK")
-		card.chip:SetSize(54, 16)
-		card.chip:SetPoint("RIGHT", -10, 0)
-		Fill(card.chip, ROLE_CHIP)
-		card.chipText = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		card.chipText:SetPoint("CENTER", card.chip)
-		card.alias = card:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-		card.alias:SetPoint("TOPLEFT", card.avatar, "TOPRIGHT", 10, -1)
-		card.alias:SetPoint("RIGHT", card.chip, "LEFT", -8, 0)
-		card.alias:SetJustifyH("LEFT")
-		card.alias:SetWordWrap(false)
-		card.name = card:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-		card.name:SetPoint("BOTTOMLEFT", card.avatar, "BOTTOMRIGHT", 10, 1)
-		card.name:SetPoint("RIGHT", card.chip, "LEFT", -8, 0)
-		card.name:SetJustifyH("LEFT")
-		card.name:SetWordWrap(false)
-		card.name:SetTextColor(DIM_TEXT:GetRGB())
-		card:SetScript("OnClick", function(self)
-			if ns.CanEdit(current) then
-				Select(self.entry)
-			end
-		end)
-	end
+-- Creates one empty alias card inside a card row.
+local function CreateCard(row)
+	local card = CreateFrame("Button", nil, row)
+	card:SetSize(CARD_WIDTH, CARD_HEIGHT)
+	card.border = AddBackground(card, CARD_BORDER)
+	local background = AddBackground(card, PANEL, 1, 1)
+	AddHover(card, background)
+	card.avatar, card.letter = CreateAvatar(card, 34, "GameFontHighlightLarge")
+	card.avatar:SetPoint("LEFT", 10, 0)
+	card.chip = card:CreateTexture(nil, "ARTWORK")
+	card.chip:SetSize(54, 16)
+	card.chip:SetPoint("RIGHT", -10, 0)
+	Fill(card.chip, ROLE_CHIP)
+	card.chipText = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	card.chipText:SetPoint("CENTER", card.chip)
+	card.alias = card:CreateFontString(nil, "ARTWORK", "GameFontHighlightLarge")
+	card.alias:SetPoint("TOPLEFT", card.avatar, "TOPRIGHT", 10, -1)
+	card.alias:SetPoint("RIGHT", card.chip, "LEFT", -8, 0)
+	card.alias:SetJustifyH("LEFT")
+	card.alias:SetWordWrap(false)
+	card.name = card:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+	card.name:SetPoint("BOTTOMLEFT", card.avatar, "BOTTOMRIGHT", 10, 1)
+	card.name:SetPoint("RIGHT", card.chip, "LEFT", -8, 0)
+	card.name:SetJustifyH("LEFT")
+	card.name:SetWordWrap(false)
+	card.name:SetTextColor(DIM_TEXT:GetRGB())
+	card.newText = card:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+	card.newText:SetPoint("CENTER")
+	card.newText:SetText("+ New alias")
+	card.newText:SetTextColor(MUTED_TEXT:GetRGB())
+	card:SetScript("OnClick", function(self)
+		if self.entry == NEW_CARD then
+			Select(nil)
+			frame.aliasBox:SetFocus()
+		elseif ns.CanEdit(current) then
+			Select(self.entry)
+		end
+	end)
+	return card
+end
+
+-- Fills one card with entry, or turns it into the "+ New alias" card.
+local function SetCard(card, entry)
 	card.entry = entry
+	local isNew = entry == NEW_CARD
+	card.newText:SetShown(isNew)
+	for _, part in ipairs({ card.avatar, card.letter, card.chip, card.chipText, card.alias, card.name }) do
+		part:SetShown(not isNew)
+	end
+	if isNew then
+		Tint(card.border, NEW_BORDER)
+		return
+	end
 	SetAvatar(card.avatar, card.letter, entry.alias, entry.kind, entry.id)
 	card.alias:SetText("@" .. entry.alias)
 	card.name:SetText(entry.name)
 	Tint(card.chip, entry.kind == "role" and ROLE_CHIP or PERSON_CHIP)
 	card.chipText:SetText(entry.kind == "role" and "ROLE" or "PERSON")
 	Tint(card.border, entry == selected and BLURPLE or CARD_BORDER)
+end
+
+-- Fills one row of up to two cards. pair = { entry, entry or nil }.
+-- Rows are created plain and get their cards the first time they are used.
+local function InitCardRow(row, pair)
+	if not row.cards then
+		row.cards = { CreateCard(row), CreateCard(row) }
+		row.cards[1]:SetPoint("TOPLEFT")
+		row.cards[2]:SetPoint("TOPLEFT", CARD_WIDTH + CARD_GAP, 0)
+	end
+	for i, card in ipairs(row.cards) do
+		card:SetShown(pair[i] ~= nil)
+		if pair[i] then
+			SetCard(card, pair[i])
+		end
+	end
 end
 
 -- Formats a server timestamp for the log, such as "Nov 23 02:31 PM".
@@ -379,7 +422,7 @@ local function CreateScrollList(parent, frameType, extent, spacing, initializer)
 	return scrollBox
 end
 
--- Shows the current guild's log and, above it, the most recent sync.
+-- Shows the current guild's log and, in the bottom bar, the most recent sync.
 local function RefreshLog()
 	local data = ns.GetGuildData()
 	local log = data and data.log or {}
@@ -406,20 +449,20 @@ local function CreateEditor(sidePanel)
 	editor:SetAllPoints()
 	frame.editor = editor
 
-	frame.editAvatar, frame.editLetter = CreateAvatar(editor, 40, "GameFontHighlightLarge")
-	frame.editAvatar:SetPoint("TOPLEFT", 16, -16)
+	frame.editAvatar, frame.editLetter = CreateAvatar(editor, 44, "GameFontHighlightHuge")
+	frame.editAvatar:SetPoint("TOPLEFT", PAD, -PAD)
 	frame.editTitle = editor:CreateFontString(nil, "ARTWORK", "GameFontHighlightLarge")
-	frame.editTitle:SetPoint("TOPLEFT", frame.editAvatar, "TOPRIGHT", 10, -3)
-	frame.editTitle:SetPoint("RIGHT", -16, 0)
+	frame.editTitle:SetPoint("TOPLEFT", frame.editAvatar, "TOPRIGHT", 10, -6)
+	frame.editTitle:SetPoint("RIGHT", -PAD, 0)
 	frame.editTitle:SetJustifyH("LEFT")
 	frame.editTitle:SetWordWrap(false)
 	frame.editKind = editor:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	frame.editKind:SetPoint("BOTTOMLEFT", frame.editAvatar, "BOTTOMRIGHT", 10, 3)
+	frame.editKind:SetPoint("BOTTOMLEFT", frame.editAvatar, "BOTTOMRIGHT", 10, 6)
 	frame.editKind:SetTextColor(DIM_TEXT:GetRGB())
 
-	frame.aliasBox = CreateInput(editor, "Alias (typed after @)", -70, 24)
-	frame.nameBox = CreateInput(editor, "Display name", -120, 32)
-	frame.idBox = CreateInput(editor, "Discord ID", -170, 20)
+	frame.aliasBox = CreateInput(editor, "Alias", -76, 24)
+	frame.nameBox = CreateInput(editor, "Display name", -133, 32)
+	frame.idBox = CreateInput(editor, "Discord ID", -190, 20)
 	frame.idBox:SetNumeric(true)
 	frame.aliasBox:SetScript("OnTabPressed", function() frame.nameBox:SetFocus() end)
 	frame.nameBox:SetScript("OnTabPressed", function() frame.idBox:SetFocus() end)
@@ -429,105 +472,93 @@ local function CreateEditor(sidePanel)
 		frame.editLetter:SetText(self:GetText() ~= "" and self:GetText():sub(1, 1):upper() or "+")
 	end)
 
-	local typeLabel = CreateLabel(editor, "Mentions a", -220)
-	frame.kindChoice = CreateSegmented(editor, { { "role", "Role" }, { "user", "Person" } }, 100, SetKind)
-	frame.kindChoice:SetPoint("TOPLEFT", typeLabel, "BOTTOMLEFT", 0, -4)
+	local typeLabel = CreateLabel(editor, "Type", -247)
+	frame.kindChoice = CreateSegmented(editor, { { "role", "Role" }, { "user", "Person" } }, 124, SetKind, true)
+	frame.kindChoice:SetPoint("TOPLEFT", typeLabel, "BOTTOMLEFT", 0, -6)
 
 	frame.status = editor:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
 	frame.status:SetPoint("TOPLEFT", frame.kindChoice, "BOTTOMLEFT", 0, -12)
-	frame.status:SetPoint("RIGHT", -16, 0)
+	frame.status:SetPoint("RIGHT", -PAD, 0)
 	frame.status:SetJustifyH("LEFT")
 
-	local saveButton = CreateFlatButton(editor, "Save", 120, BLURPLE, Save)
-	saveButton:SetPoint("BOTTOMLEFT", 16, 16)
-	frame.deleteButton = CreateFlatButton(editor, "Delete", 90, DANGER, Delete)
-	frame.deleteButton:SetPoint("BOTTOMRIGHT", -16, 16)
+	frame.deleteButton = CreateFlatButton(editor, "Delete", 70, DANGER, Delete)
+	frame.deleteButton:SetPoint("BOTTOMRIGHT", -PAD, PAD)
+	local saveButton = CreateFlatButton(editor, "Save", 0, BLURPLE, Save)
+	saveButton:SetPoint("BOTTOMLEFT", PAD, PAD)
+	saveButton:SetPoint("RIGHT", frame.deleteButton, "LEFT", -8, 0)
 end
 
--- Builds the window: rounded with a thin border, a title bar to drag it by and
--- a flat close button, with the page in the area below. Named so Escape can
--- close it.
+-- Builds the window, named so Escape can close it, and everything in it. The
+-- header (logo, name and view switcher) is where the window is dragged from.
 local function CreateWindow()
-	local window = CreateFrame("Frame", "BeaconFrame", UIParent)
-	window:SetSize(WINDOW_WIDTH, WINDOW_HEIGHT)
-	window:SetPoint("CENTER")
-	window:SetFrameStrata("HIGH")
-	window:SetToplevel(true)
-	window:SetMovable(true)
-	window:SetClampedToScreen(true)
-	window:EnableMouse(true)
-	window:Hide()
+	frame = CreateFrame("Frame", "BeaconFrame", UIParent)
+	frame:SetSize(WINDOW_WIDTH, WINDOW_HEIGHT)
+	frame:SetPoint("CENTER")
+	frame:SetFrameStrata("HIGH")
+	frame:SetToplevel(true)
+	frame:SetMovable(true)
+	frame:SetClampedToScreen(true)
+	frame:EnableMouse(true)
+	frame:Hide()
+	frame:SetScript("OnShow", function()
+		ns.RefreshManager()
+	end)
 	table.insert(UISpecialFrames, "BeaconFrame")
-	local border = window:CreateTexture(nil, "BACKGROUND", nil, -8)
-	border:SetAllPoints()
-	Fill(border, CARD_BORDER)
-	local background = window:CreateTexture(nil, "BACKGROUND", nil, -7)
-	background:SetPoint("TOPLEFT", 1, -1)
-	background:SetPoint("BOTTOMRIGHT", -1, 1)
-	Fill(background, BACKGROUND)
+	AddBackground(frame, CARD_BORDER, 0, -8)
+	AddBackground(frame, BACKGROUND, 1, -7)
 
-	local titleBar = CreateFrame("Frame", nil, window)
-	titleBar:SetPoint("TOPLEFT", 1, -1)
-	titleBar:SetPoint("TOPRIGHT", -1, -1)
-	titleBar:SetHeight(TITLE_HEIGHT)
-	titleBar:EnableMouse(true)
-	titleBar:RegisterForDrag("LeftButton")
-	titleBar:SetScript("OnDragStart", function() window:StartMoving() end)
-	titleBar:SetScript("OnDragStop", function() window:StopMovingOrSizing() end)
-	local titleText = titleBar:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	titleText:SetPoint("LEFT", 12, 0)
-	titleText:SetText("Beacon")
-	titleText:SetTextColor(DIM_TEXT:GetRGB())
+	-- Header. Log is the last view so hiding it from members leaves no gap.
+	local header = CreateFrame("Frame", nil, frame)
+	header:SetPoint("TOPLEFT")
+	header:SetPoint("TOPRIGHT")
+	header:SetHeight(56)
+	header:EnableMouse(true)
+	header:RegisterForDrag("LeftButton")
+	header:SetScript("OnDragStart", function() frame:StartMoving() end)
+	header:SetScript("OnDragStop", function() frame:StopMovingOrSizing() end)
+	local logo = header:CreateTexture(nil, "ARTWORK")
+	logo:SetSize(32, 32)
+	logo:SetPoint("TOPLEFT", PAD, -14)
+	logo:SetTexture(ns.LOGO)
+	local logoMask = header:CreateMaskTexture()
+	logoMask:SetAllPoints(logo)
+	logoMask:SetTexture(ROUNDED, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	logo:AddMaskTexture(logoMask)
+	local title = header:CreateFontString(nil, "ARTWORK", "GameFontHighlightHuge")
+	title:SetPoint("LEFT", logo, "RIGHT", 10, 0)
+	title:SetText("Beacon")
+	frame.viewChoice = CreateSegmented(header, { { "personal", "Personal" }, { "guild", "Guild" }, { "info", "Info" }, { "log", "Log" } }, 84, ShowView, true)
+	frame.viewChoice:SetPoint("LEFT", title, "RIGHT", 22, 0)
+
 	-- A flat close button: an X made of two thin crossed lines.
-	local close = CreateFrame("Button", nil, titleBar)
-	close:SetSize(24, 24)
-	close:SetPoint("RIGHT", -6, 0)
+	local close = CreateFrame("Button", nil, header)
+	close:SetSize(28, 28)
+	close:SetPoint("RIGHT", -12, 0)
+	close:SetPoint("TOP", logo, "TOP", 0, -2)
 	AddHover(close)
 	for _, angle in ipairs({ 45, -45 }) do
 		local line = close:CreateTexture(nil, "ARTWORK")
-		line:SetSize(12, 2)
+		line:SetSize(14, 2)
 		line:SetPoint("CENTER")
 		line:SetColorTexture(MUTED_TEXT:GetRGB())
 		line:SetRotation(math.rad(angle))
 	end
-	close:SetScript("OnClick", function() window:Hide() end)
-	return window
-end
+	close:SetScript("OnClick", function() frame:Hide() end)
 
--- Builds the page inside the window, below the title bar.
-local function CreatePage()
-	local window = CreateWindow()
-	frame = CreateFrame("Frame", nil, window)
-	frame:SetPoint("TOPLEFT", 1, -(TITLE_HEIGHT + 1))
-	frame:SetPoint("BOTTOMRIGHT", -1, 1)
-	frame:SetScript("OnShow", function()
-		ns.RefreshManager()
-	end)
-	frame.window = window
-
-	-- Header: logo, name and the view switcher. Log is last so hiding it from
-	-- members leaves no gap.
-	local logo = frame:CreateTexture(nil, "ARTWORK")
-	logo:SetSize(32, 32)
-	logo:SetTexture(ns.LOGO)
-	logo:SetPoint("TOPLEFT", 12, -10)
-	local title = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightHuge")
-	title:SetPoint("LEFT", logo, "RIGHT", 10, 0)
-	title:SetText("Beacon")
-	frame.viewChoice = CreateSegmented(frame, { { "personal", "Personal" }, { "guild", "Guild" }, { "info", "Info" }, { "log", "Log" } }, 84, ShowView)
-	frame.viewChoice:SetPoint("LEFT", title, "RIGHT", 18, 0)
+	-- Bottom bar text: what the list is, its sync state or warnings, and the last sync on Log.
 	frame.subtitle = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	frame.subtitle:SetPoint("TOPLEFT", 14, -54)
-	frame.subtitle:SetPoint("RIGHT", -14, 0)
+	frame.subtitle:SetPoint("BOTTOMLEFT", PAD, 14)
+	frame.subtitle:SetWidth(560)
 	frame.subtitle:SetJustifyH("LEFT")
+	frame.subtitle:SetMaxLines(2)
 
-	-- Lists view: search, filter, alias cards, side panel and bottom bar
+	-- Lists view: search and filter row, alias cards, side panel and Import/Export
 	local listView = CreateFrame("Frame", nil, frame)
 	listView:SetAllPoints()
 	frame.listView = listView
 	frame.search = CreateField(listView)
-	frame.search:SetPoint("TOPLEFT", 12, -76)
-	frame.search:SetWidth(300)
+	frame.search:SetPoint("TOPLEFT", PAD, -60)
+	frame.search:SetWidth(280)
 	local placeholder = frame.search:CreateFontString(nil, "ARTWORK", "GameFontDisable")
 	placeholder:SetPoint("LEFT", 10, 0)
 	placeholder:SetText("Search")
@@ -540,33 +571,30 @@ local function CreatePage()
 		UpdatePlaceholder(self)
 		ns.RefreshManager()
 	end)
-
 	frame.filterChoice = CreateSegmented(listView, { { "all", "All" }, { "role", "Roles" }, { "user", "People" } }, 64, SetFilter)
-	frame.filterChoice:SetPoint("TOPLEFT", 12, -110)
-	frame.newButton = CreateFlatButton(listView, "+ New", 70, NEUTRAL, function()
-		Select(nil)
-		frame.aliasBox:SetFocus()
-	end)
-	frame.newButton:SetHeight(30)
-	frame.newButton:SetPoint("TOPRIGHT", frame.search, "BOTTOMRIGHT", 0, -6)
+	frame.filterChoice:SetPoint("LEFT", frame.search, "RIGHT", 8, 0)
+	frame.count = listView:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+	frame.count:SetPoint("RIGHT", -PAD, 0)
+	frame.count:SetPoint("TOP", frame.search, "TOP", 0, -9)
+	frame.count:SetTextColor(DIM_TEXT:GetRGB())
 
 	local cards = CreateFrame("Frame", nil, listView)
-	cards:SetPoint("TOPLEFT", 12, -148)
-	cards:SetPoint("BOTTOMLEFT", 12, 44)
-	cards:SetWidth(314)
-	frame.scrollBox = CreateScrollList(cards, "Button", 50, 6, InitCard)
+	cards:SetPoint("TOPLEFT", PAD, CONTENT_TOP)
+	cards:SetPoint("BOTTOMLEFT", PAD, CONTENT_BOTTOM)
+	cards:SetWidth(CARDS_WIDTH + 18)
+	frame.scrollBox = CreateScrollList(cards, "Frame", CARD_HEIGHT, 8, InitCardRow)
 	frame.empty = cards:CreateFontString(nil, "ARTWORK", "GameFontDisable")
 	frame.empty:SetPoint("CENTER", frame.scrollBox)
 
 	local sidePanel = CreatePanel(listView)
-	sidePanel:SetPoint("TOPLEFT", 340, -76)
-	sidePanel:SetPoint("BOTTOMRIGHT", -12, 44)
+	sidePanel:SetPoint("TOPLEFT", cards, "TOPRIGHT", 8, 0)
+	sidePanel:SetPoint("BOTTOMRIGHT", -PAD, CONTENT_BOTTOM)
 	CreateEditor(sidePanel)
 
 	-- Read-only note for the guild list
 	frame.info = sidePanel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-	frame.info:SetPoint("TOPLEFT", 16, -16)
-	frame.info:SetPoint("RIGHT", -16, 0)
+	frame.info:SetPoint("TOPLEFT", PAD, -PAD)
+	frame.info:SetPoint("RIGHT", -PAD, 0)
 	frame.info:SetJustifyH("LEFT")
 	frame.info:SetSpacing(4)
 	frame.info:SetText("Your guild officers keep this list up to date. Changes arrive automatically.\n\n"
@@ -574,10 +602,6 @@ local function CreatePage()
 		.. "Add your own aliases under Personal.\n\n"
 		.. GRAY_FONT_COLOR:WrapTextInColorCode("@everyone and @here are always blocked."))
 
-	-- Bottom bar
-	frame.count = listView:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	frame.count:SetPoint("BOTTOMLEFT", 14, 18)
-	frame.count:SetTextColor(DIM_TEXT:GetRGB())
 	frame.exportButton = CreateFlatButton(listView, "Export...", 90, NEUTRAL, function()
 		ns.OpenTransfer("export", current)
 	end)
@@ -590,11 +614,11 @@ local function CreatePage()
 	logView:SetAllPoints()
 	frame.logView = logView
 	local logPanel = CreatePanel(logView)
-	logPanel:SetPoint("TOPLEFT", 12, -76)
-	logPanel:SetPoint("BOTTOMRIGHT", -12, 12)
+	logPanel:SetPoint("TOPLEFT", PAD, -60)
+	logPanel:SetPoint("BOTTOMRIGHT", -PAD, CONTENT_BOTTOM)
 	local logArea = CreateFrame("Frame", nil, logPanel)
-	logArea:SetPoint("TOPLEFT", 4, -6)
-	logArea:SetPoint("BOTTOMRIGHT", -4, 6)
+	logArea:SetPoint("TOPLEFT", 4, -8)
+	logArea:SetPoint("BOTTOMRIGHT", -4, 8)
 	frame.logBox = CreateScrollList(logArea, "Frame", 22, 0, InitLogRow)
 	frame.logEmpty = logPanel:CreateFontString(nil, "ARTWORK", "GameFontDisable")
 	frame.logEmpty:SetPoint("CENTER")
@@ -606,11 +630,11 @@ local function CreatePage()
 	infoView:SetAllPoints()
 	frame.infoView = infoView
 	local infoPanel = CreatePanel(infoView)
-	infoPanel:SetPoint("TOPLEFT", 12, -76)
-	infoPanel:SetPoint("BOTTOMRIGHT", -12, 12)
+	infoPanel:SetPoint("TOPLEFT", PAD, -60)
+	infoPanel:SetPoint("BOTTOMRIGHT", -PAD, CONTENT_BOTTOM)
 	local infoText = infoPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-	infoText:SetPoint("TOPLEFT", 16, -16)
-	infoText:SetPoint("RIGHT", -16, 0)
+	infoText:SetPoint("TOPLEFT", 20, -20)
+	infoText:SetPoint("RIGHT", -20, 0)
 	infoText:SetJustifyH("LEFT")
 	infoText:SetSpacing(4)
 	infoText:SetText("Beacon Discord Sync is a free Windows tool, downloaded separately, that fills your Beacon lists "
@@ -621,7 +645,7 @@ local function CreatePage()
 		.. "removed, and everyone keeps their alias.\n\n"
 		.. "Download it and read the setup steps here:")
 	local linkBox = CreateField(infoPanel)
-	linkBox:SetSize(380, 28)
+	linkBox:SetWidth(420)
 	linkBox:SetPoint("TOPLEFT", infoText, "BOTTOMLEFT", 0, -10)
 	linkBox:SetText(COMPANION_URL)
 	linkBox:SetCursorPosition(0)
@@ -654,14 +678,14 @@ local function LayoutBottomButtons()
 			if previous then
 				button:SetPoint("RIGHT", previous, "LEFT", -8, 0)
 			else
-				button:SetPoint("BOTTOMRIGHT", -12, 10)
+				button:SetPoint("BOTTOMRIGHT", -PAD, 12)
 			end
 			previous = button
 		end
 	end
 end
 
--- Redraws the page from the shown list. Does nothing while it is not on screen.
+-- Redraws the window from the shown list. Does nothing while it is not on screen.
 function ns.RefreshManager()
 	if not frame or not frame:IsVisible() then
 		return
@@ -707,12 +731,22 @@ function ns.RefreshManager()
 	table.sort(shown, function(a, b)
 		return a.alias < b.alias
 	end)
-	frame.scrollBox:SetDataProvider(CreateDataProvider(shown), ScrollBoxConstants.RetainScrollPosition)
+	local cardsShown = #shown
+	if editable then
+		shown[#shown + 1] = NEW_CARD
+	end
+	-- Two cards to a row.
+	local rows = {}
+	for i = 1, #shown, 2 do
+		rows[#rows + 1] = { shown[i], shown[i + 1] }
+	end
+	frame.scrollBox:SetDataProvider(CreateDataProvider(rows), ScrollBoxConstants.RetainScrollPosition)
 	frame.empty:SetText(#entries == 0 and "No aliases yet." or "No matches.")
 	frame.empty:SetShown(#shown == 0)
 
 	local guildName = GetGuildInfo("player")
 	local subtitleColor = MUTED_TEXT
+	local lastChanged = ""
 	if current == "personal" then
 		frame.subtitle:SetText("Your own aliases. Only you use them, and they win over guild aliases with the same name.")
 	elseif not guildName then
@@ -722,21 +756,20 @@ function ns.RefreshManager()
 		subtitleColor = RED_FONT_COLOR
 	elseif ns.IsSending() then
 		frame.subtitle:SetText(guildName .. "  -  sharing the list with your guild...")
-	elseif list and list.editor then
-		frame.subtitle:SetText(string.format("%s  -  last changed by %s on %s",
-			guildName, Ambiguate(list.editor, "guild"), date("%b %d", list.rev)))
 	else
 		frame.subtitle:SetText(guildName)
 	end
+	if current == "guild" and list and list.editor then
+		lastChanged = string.format("  ·  last changed by %s", Ambiguate(list.editor, "guild"))
+	end
 	frame.subtitle:SetTextColor(subtitleColor:GetRGB())
-	if #shown < #entries then
-		frame.count:SetText(string.format("%d of %d shown", #shown, #entries))
+	if cardsShown < #entries then
+		frame.count:SetText(string.format("%d of %d shown", cardsShown, #entries) .. lastChanged)
 	else
-		frame.count:SetText(string.format("%d / %d entries", #entries, ns.MAX_ENTRIES))
+		frame.count:SetText(string.format("%d / %d", #entries, ns.MAX_ENTRIES) .. lastChanged)
 	end
 
 	frame.editor:SetShown(editable)
-	frame.newButton:SetShown(editable)
 	frame.info:SetShown(not editable and guildName ~= nil)
 	SetButtonEnabled(frame.deleteButton, selected ~= nil)
 
@@ -749,7 +782,7 @@ end
 -- is built the first time it opens.
 function ns.ToggleManager()
 	if not frame then
-		CreatePage()
+		CreateWindow()
 	end
-	frame.window:SetShown(not frame.window:IsShown())
+	frame:SetShown(not frame:IsShown())
 end

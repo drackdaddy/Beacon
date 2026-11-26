@@ -34,7 +34,7 @@ Your chat window shows `@Raid Team`, while Discord receives the real role or per
 
 `@everyone` and `@here` are always blocked. Beacon sends them as plain words so nobody pings the whole server by accident.
 
-Beacon's lists open in their own window. Click the Beacon minimap button, or type `/beacon`, to open or close it; it opens in combat too. Drag the window by its title bar to move it, and press Escape to close it. Drag the minimap button to move it around the minimap. Type `/beacon minimap` to hide or show it.
+Beacon's lists open in their own window. Click the Beacon minimap button, or type `/beacon`, to open or close it; it opens in combat too. Drag the window by its top bar to move it, and press Escape to close it. Drag the minimap button to move it around the minimap. Type `/beacon minimap` to hide or show it.
 
 ## Your two lists
 
@@ -45,7 +45,7 @@ Use **Personal** and **Guild** at the top of Beacon's window to switch lists. It
 
 Each list holds up to 500 entries. Type in the **Search** box above a list to show only aliases or display names that contain what you typed. Under the search box, use the **All**, **Roles** and **People** buttons to list everything, only role mentions or only person mentions. The filter and the search work together, and switching lists resets both.
 
-To add an alias, fill in the **Alias** (what you type after `@`), a **Display name**, choose **Role** or **Person**, paste the **Discord ID**, and choose **Save**. Click an alias card to change or delete it, or choose **+ New** to start a fresh one.
+To add an alias, fill in the **Alias** (what you type after `@`), a **Display name**, choose **Role** or **Person**, paste the **Discord ID**, and choose **Save**. Click an alias card to change or delete it, or choose the **+ New alias** card to start a fresh one.
 
 ## Import and export
 

@@ -2,10 +2,10 @@
 
 ## 1.1.0 - Discord-style menu
 
-- Beacon now has its own window instead of a page in Options. Drag it by the title bar and press Escape to close it. `/beacon` and the minimap button open or close it, even in combat.
+- Beacon now has its own window instead of a page in Options. Drag it by its top bar and press Escape to close it. `/beacon` and the minimap button open or close it, even in combat.
 - A new look inspired by Discord: dark panels with rounded corners, a flat close button, and a segmented control for Personal, Guild, Info and Log.
-- Each alias is a card with a round initial and a **ROLE** or **PERSON** tag. Roles are blurple, and each person keeps their own color.
-- The editor sits in a side panel that shows the alias you're editing. **Save** and **Delete** are colored buttons, and **+ New** sits next to the filter.
+- Aliases are cards, two to a row, each with a round initial and a **ROLE** or **PERSON** tag. Roles are blurple, and each person keeps their own color.
+- The editor sits in a side panel that shows the alias you're editing. **Save** and **Delete** are colored buttons, and a **+ New alias** card sits after the last alias.
 - Made with the assistance of AI.
 
 ## 1.0.0 - First release
