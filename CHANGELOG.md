@@ -4,8 +4,10 @@
 
 - Beacon now has its own window instead of a page in Options. Drag it by its top bar and press Escape to close it. `/beacon` and the minimap button open or close it, even in combat.
 - A new look inspired by Discord: dark panels with rounded corners, a flat close button, and a segmented control for Personal, Guild, Info and Log.
-- Aliases are cards, two to a row, each with a round initial and a **ROLE** or **PERSON** tag. Roles are blurple, and each person keeps their own color.
+- Aliases are cards, two to a row, each with a round initial and a **ROLE** or **GAMER** tag. Roles are blurple, and each gamer keeps their own color.
 - The editor sits in a side panel that shows the alias you're editing. **Save** and **Delete** are colored buttons, and a **+ New alias** card sits after the last alias.
+- Person mentions are now called **Gamer**, in the editor, the tags, the **Gamers** filter, Import and Export. Imports still accept `Person`, so older exports and the companion tool keep working.
+- New aliases start as **Gamer**.
 - Made with the assistance of AI.
 
 ## 1.0.0 - First release

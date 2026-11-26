@@ -139,7 +139,7 @@ function ns.CanEdit(which)
 end
 
 -- Lookup tables over both lists, rebuilt only when a list changes.
--- byAlias["raid"] = entry; byMention["&123"] = role entry; byMention["123"] = person entry.
+-- byAlias["raid"] = entry; byMention["&123"] = role entry; byMention["123"] = gamer entry.
 local cache = {}
 
 function ns.GetLookups()
@@ -180,7 +180,7 @@ function ns.ValidateEntry(entry)
 		return nil, "Display name must be 1-32 characters without , ; or |."
 	end
 	if entry.kind ~= "role" and entry.kind ~= "user" then
-		return nil, "Choose Role or Person."
+		return nil, "Choose Role or Gamer."
 	end
 	if not entry.id:match("^%d+$") or #entry.id < 17 or #entry.id > 20 then
 		return nil, "Discord ID must be the 17-20 digit number copied from Discord."
@@ -241,10 +241,12 @@ function ns.DeleteEntry(which, entry)
 	Touch(which, list, "You deleted @" .. entry.alias)
 end
 
-local KINDS = { role = "role", r = "role", person = "user", user = "user", p = "user", u = "user" }
+-- "person" and "p" are still read, so exports made before Gamer was the name
+-- (and the companion tool's exports) keep importing.
+local KINDS = { role = "role", r = "role", gamer = "user", g = "user", person = "user", p = "user", user = "user", u = "user" }
 
 -- Reads pasted import text, one entry per line:
---   alias, Role|Person, Discord ID[, display name]
+--   alias, Role|Gamer, Discord ID[, display name]
 -- Commas or tabs (spreadsheet copy) separate fields; a leading @ on the alias,
 -- blank lines and lines starting with # are ignored, except the
 --   # Beacon Discord export <stamp> part <i> of <n>
@@ -431,9 +433,9 @@ function ns.ExportEntries(which)
 	table.sort(entries, function(a, b)
 		return a.alias < b.alias
 	end)
-	local lines = { "# alias, Role or Person, Discord ID, display name" }
+	local lines = { "# alias, Role or Gamer, Discord ID, display name" }
 	for _, entry in ipairs(entries) do
-		lines[#lines + 1] = table.concat({ entry.alias, entry.kind == "role" and "Role" or "Person", entry.id, entry.name }, ", ")
+		lines[#lines + 1] = table.concat({ entry.alias, entry.kind == "role" and "Role" or "Gamer", entry.id, entry.name }, ", ")
 	end
 	return table.concat(lines, "\n")
 end

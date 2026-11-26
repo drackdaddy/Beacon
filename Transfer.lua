@@ -13,7 +13,7 @@ local _, ns = ...
 ---------------------------------------------------------------------------
 local LIST_NAMES = { guild = "guild list", personal = "personal list" }
 local MAX_SKIPPED_SHOWN = 10
-local IMPORT_HELP = "One per line: alias, Role or Person, Discord ID, display name (optional).\n"
+local IMPORT_HELP = "One per line: alias, Role or Gamer, Discord ID, display name (optional).\n"
 	.. GRAY_FONT_COLOR:WrapTextInColorCode("Example: raid, Role, 123456789012345678, Raid Team")
 local EXPORT_HELP = "Press Ctrl+C to copy. Paste it into Import on any list or character, or keep it as a backup.\n"
 	.. GRAY_FONT_COLOR:WrapTextInColorCode("Press Escape to close.")

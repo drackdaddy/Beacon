@@ -4,7 +4,7 @@ Beacon is a lightweight addon for **World of Warcraft: Forever** that lets you @
 
 ## Features
 
-- **@mentions from guild chat**: Type friendly aliases like `@raid`, `@tanks` or `@Elara`. Beacon turns them into real Discord role and person mentions just before your message is sent.
+- **@mentions from guild chat**: Type friendly aliases like `@raid`, `@tanks` or `@Elara`. Beacon turns them into real Discord role and gamer mentions just before your message is sent.
 - **Autocomplete**: Start typing `@` to see the matching aliases.
 - **Readable chat**: Your chat window shows friendly names, and Discord gets the working mention.
 - **Officer-managed guild list**: Officers keep one shared list of members and roles, and Beacon syncs it automatically to every guild member who has the addon. Nobody has to look up Discord IDs or set up aliases themselves.
@@ -30,7 +30,7 @@ In **Guild** or **Guild Discord** chat, type `@` and pick an alias:
 - **Click** an alias to insert it.
 - **Enter** sends your message with the highlighted alias filled in.
 
-Your chat window shows `@Raid Team`, while Discord receives the real role or person mention.
+Your chat window shows `@Raid Team`, while Discord receives the real role or gamer mention.
 
 `@everyone` and `@here` are always blocked. Beacon sends them as plain words so nobody pings the whole server by accident.
 
@@ -43,18 +43,18 @@ Use **Personal** and **Guild** at the top of Beacon's window to switch lists. It
 - **Personal**: your own aliases. You can add, change and delete them, and they're never sent to anyone. If a personal alias has the same name as a guild alias, your personal one is used. Your personal list is shared by all your characters on this account.
 - **Guild**: the shared list your officers keep. Everyone else can see it but not change it.
 
-Each list holds up to 500 entries. Type in the **Search** box above a list to show only aliases or display names that contain what you typed. Under the search box, use the **All**, **Roles** and **People** buttons to list everything, only role mentions or only person mentions. The filter and the search work together, and switching lists resets both.
+Each list holds up to 500 entries. Type in the **Search** box above a list to show only aliases or display names that contain what you typed. Under the search box, use the **All**, **Roles** and **Gamers** buttons to list everything, only role mentions or only gamer mentions. The filter and the search work together, and switching lists resets both.
 
-To add an alias, fill in the **Alias** (what you type after `@`), a **Display name**, choose **Role** or **Person**, paste the **Discord ID**, and choose **Save**. Click an alias card to change or delete it, or choose the **+ New alias** card to start a fresh one.
+To add an alias, fill in the **Alias** (what you type after `@`), a **Display name**, choose **Role** or **Gamer** (new aliases start as **Gamer**), paste the **Discord ID**, and choose **Save**. Click an alias card to change or delete it, or choose the **+ New alias** card to start a fresh one.
 
 ## Import and export
 
 Choose **Import...** on a list you can edit, paste your aliases, one per line, and choose **Import**:
 
 ```
-alias, Role or Person, Discord ID, display name
+alias, Role or Gamer, Discord ID, display name
 raid, Role, 123456789012345678, Raid Team
-elara, Person, 223456789012345678
+elara, Gamer, 223456789012345678
 ```
 
 - The display name is optional. Without one, the alias is used.
@@ -95,7 +95,7 @@ The list is sent in small pieces about one second apart so it doesn't flood the 
 ### Finding Discord IDs
 
 1. In Discord, open **User Settings → Advanced** and turn on **Developer Mode**.
-2. For a person, right-click their name and choose **Copy User ID**.
+2. For a gamer, right-click their name and choose **Copy User ID**.
 3. For a role, open **Server Settings → Roles**, right-click the role and choose **Copy Role ID**.
 
 If a role mention reaches Discord but nobody is notified, turn on **Allow anyone to @mention this role** for that role in Discord.

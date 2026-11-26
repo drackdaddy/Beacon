@@ -4,14 +4,15 @@ local _, ns = ...
 -- Beacon window
 -- Beacon's own movable window, styled after Discord: rounded dark panels, a
 -- segmented control for the views, and each alias shown as a card with a
--- round initial and a ROLE or PERSON tag, two cards to a row.
+-- round initial and a ROLE or GAMER tag, two cards to a row.
 -- Views: Personal (the player's own aliases, shown first), Guild (shared;
 -- officers edit it, everyone else reads it), Info (what the Beacon Discord
 -- Sync companion tool is, with a link to copy) and, for officers only, Log
 -- (guild list syncs and changes, newest first).
 -- Editable lists get a "+ New alias" card, a side panel editor (alias,
--- display name, Discord ID, Role/Person) and an Import button; every list can
--- be exported, searched by alias or display name, and filtered to roles or people.
+-- display name, Discord ID, Role/Gamer; new entries start as Gamer) and an
+-- Import button; every list can be exported, searched by alias or display
+-- name, and filtered to roles or gamers.
 -- /beacon and the minimap button open and close it. It's a plain window with
 -- no protected parts, so it opens in combat too. Drag the header to move it;
 -- Escape closes it.
@@ -39,9 +40,9 @@ local NEUTRAL = CreateColor(0.306, 0.314, 0.345)
 local MUTED_TEXT = CreateColor(0.710, 0.729, 0.757)
 local DIM_TEXT = CreateColor(0.580, 0.608, 0.643)
 local ROLE_CHIP = CreateColor(0.235, 0.271, 0.647)
-local PERSON_CHIP = CreateColor(0.102, 0.361, 0.220)
--- People get one of these, picked from their Discord ID so it never changes.
-local PEOPLE_COLORS = {
+local GAMER_CHIP = CreateColor(0.102, 0.361, 0.220)
+-- Gamers get one of these, picked from their Discord ID so it never changes.
+local GAMER_COLORS = {
 	CreateColor(0.761, 0.486, 0.055),
 	CreateColor(0.659, 0.235, 0.541),
 	CreateColor(0.137, 0.647, 0.353),
@@ -61,7 +62,7 @@ local NEW_CARD = {}        -- stands in the card list for the "+ New alias" card
 local frame
 local current = "personal" -- view shown: "personal", "guild", "info" or "log"
 local selected             -- entry loaded in the editor, or nil for a new one
-local kind = "role"        -- Role/Person choice in the editor
+local kind = "user"        -- Role/Gamer choice in the editor ("user" is a gamer)
 local showKind = "all"     -- list filter: "all", "role" or "user"
 
 -- Gives texture rounded corners and tints it color, at alpha (default 1).
@@ -183,12 +184,12 @@ local function CreateAvatar(parent, size, fontObject)
 	return avatar, letter
 end
 
--- Colors an avatar for a role (blurple) or a person (a color from their
+-- Colors an avatar for a role (blurple) or a gamer (a color from their
 -- Discord ID) and shows the alias's first letter, or + when there's no alias.
 local function SetAvatar(avatar, letter, alias, entryKind, id)
 	local color = BLURPLE
 	if entryKind == "user" then
-		color = PEOPLE_COLORS[(tonumber(id:sub(-1)) or 0) % #PEOPLE_COLORS + 1]
+		color = GAMER_COLORS[(tonumber(id:sub(-1)) or 0) % #GAMER_COLORS + 1]
 	end
 	avatar:SetColorTexture(color:GetRGB())
 	letter:SetText(alias ~= "" and alias:sub(1, 1):upper() or "+")
@@ -221,7 +222,7 @@ local function UpdateEditorHeader()
 	local alias = selected and selected.alias or ""
 	SetAvatar(frame.editAvatar, frame.editLetter, alias, kind, selected and selected.id or "")
 	frame.editTitle:SetText(selected and ("@" .. alias) or "New alias")
-	frame.editKind:SetText(kind == "role" and "Role mention" or "Person mention")
+	frame.editKind:SetText(kind == "role" and "Role mention" or "Gamer mention")
 end
 
 local function SetKind(value)
@@ -238,12 +239,13 @@ local function SetFilter(value)
 end
 
 -- Loads entry into the editor, or clears it for a new entry when entry is nil.
+-- New entries start as Gamer, the most common kind of alias.
 local function Select(entry)
 	selected = entry
 	frame.aliasBox:SetText(entry and entry.alias or "")
 	frame.nameBox:SetText(entry and entry.name or "")
 	frame.idBox:SetText(entry and entry.id or "")
-	SetKind(entry and entry.kind or "role")
+	SetKind(entry and entry.kind or "user")
 	SetStatus(nil)
 	ns.RefreshManager()
 end
@@ -353,8 +355,8 @@ local function SetCard(card, entry)
 	SetAvatar(card.avatar, card.letter, entry.alias, entry.kind, entry.id)
 	card.alias:SetText("@" .. entry.alias)
 	card.name:SetText(entry.name)
-	Tint(card.chip, entry.kind == "role" and ROLE_CHIP or PERSON_CHIP)
-	card.chipText:SetText(entry.kind == "role" and "ROLE" or "PERSON")
+	Tint(card.chip, entry.kind == "role" and ROLE_CHIP or GAMER_CHIP)
+	card.chipText:SetText(entry.kind == "role" and "ROLE" or "GAMER")
 	Tint(card.border, entry == selected and BLURPLE or CARD_BORDER)
 end
 
@@ -473,7 +475,7 @@ local function CreateEditor(sidePanel)
 	end)
 
 	local typeLabel = CreateLabel(editor, "Type", -247)
-	frame.kindChoice = CreateSegmented(editor, { { "role", "Role" }, { "user", "Person" } }, 124, SetKind, true)
+	frame.kindChoice = CreateSegmented(editor, { { "role", "Role" }, { "user", "Gamer" } }, 124, SetKind, true)
 	frame.kindChoice:SetPoint("TOPLEFT", typeLabel, "BOTTOMLEFT", 0, -6)
 
 	frame.status = editor:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
@@ -571,7 +573,7 @@ local function CreateWindow()
 		UpdatePlaceholder(self)
 		ns.RefreshManager()
 	end)
-	frame.filterChoice = CreateSegmented(listView, { { "all", "All" }, { "role", "Roles" }, { "user", "People" } }, 64, SetFilter)
+	frame.filterChoice = CreateSegmented(listView, { { "all", "All" }, { "role", "Roles" }, { "user", "Gamers" } }, 64, SetFilter)
 	frame.filterChoice:SetPoint("LEFT", frame.search, "RIGHT", 8, 0)
 	frame.count = listView:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 	frame.count:SetPoint("RIGHT", -PAD, 0)
