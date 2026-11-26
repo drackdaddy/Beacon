@@ -3,7 +3,7 @@ local _, ns = ...
 ---------------------------------------------------------------------------
 -- Minimap button
 -- A round button with the Beacon logo in the standard minimap tracking
--- border. Click opens Beacon in Options > AddOns; drag moves it around the minimap.
+-- border. Click opens or closes the Beacon window; drag moves it around the minimap.
 -- /beacon minimap shows or hides it.
 -- Events: PLAYER_LOGIN
 -- SavedVariables: BeaconDB.minimap.angle (degrees), BeaconDB.minimap.hide
@@ -50,7 +50,7 @@ local function CreateMinimapButton()
 	border:SetPoint("TOPLEFT")
 
 	button:SetScript("OnClick", function()
-		ns.OpenManager()
+		ns.ToggleManager()
 	end)
 	button:SetScript("OnDragStart", function(self)
 		self:LockHighlight()
@@ -63,7 +63,7 @@ local function CreateMinimapButton()
 	button:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 		GameTooltip:SetText("Beacon")
-		GameTooltip:AddLine("Click to open your mention lists in Options.", HIGHLIGHT_FONT_COLOR:GetRGB())
+		GameTooltip:AddLine("Click to open or close your mention lists.", HIGHLIGHT_FONT_COLOR:GetRGB())
 		GameTooltip:AddLine("Drag to move this button.", GRAY_FONT_COLOR:GetRGB())
 		GameTooltip:Show()
 	end)

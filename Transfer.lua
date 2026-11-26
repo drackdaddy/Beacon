@@ -13,13 +13,22 @@ local _, ns = ...
 ---------------------------------------------------------------------------
 local LIST_NAMES = { guild = "guild list", personal = "personal list" }
 local MAX_SKIPPED_SHOWN = 10
-local IMPORT_HELP = "One per line: alias, Role or Person, Discord ID, display name (optional).\n"
+local IMPORT_HELP = "One per line: alias, Role or Gamer, Discord ID, display name (optional).\n"
 	.. GRAY_FONT_COLOR:WrapTextInColorCode("Example: raid, Role, 123456789012345678, Raid Team")
 local EXPORT_HELP = "Press Ctrl+C to copy. Paste it into Import on any list or character, or keep it as a backup.\n"
 	.. GRAY_FONT_COLOR:WrapTextInColorCode("Press Escape to close.")
 
 local frame
 local target -- list being imported into: "guild" or "personal"
+
+-- Creates a standard red game button, matching the window's Blizzard frame.
+local function CreateButton(parent, label, width, onClick)
+	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+	button:SetSize(width, 22)
+	button:SetText(label)
+	button:SetScript("OnClick", onClick)
+	return button
+end
 
 local function SetStatus(text, color)
 	frame.status:SetText(text)
@@ -116,7 +125,7 @@ local function CreateTransfer()
 	frame.status:SetJustifyH("LEFT")
 	frame.status:SetWordWrap(false)
 
-	frame.importButton = ns.CreateButton(frame, "Import", 96, Import)
+	frame.importButton = CreateButton(frame, "Import", 96, Import)
 	frame.importButton:SetPoint("BOTTOMRIGHT", -6, 4)
 end
 
