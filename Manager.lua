@@ -1,10 +1,9 @@
 local _, ns = ...
 
 ---------------------------------------------------------------------------
--- Lists page in Options > AddOns
--- Beacon's page in the game's Options window, under the AddOns tab, styled
--- after Discord: dark panels, a segmented control for the views, and each
--- alias shown as a card with a round initial and a ROLE or PERSON tag.
+-- Beacon window
+-- Beacon's own movable window, styled after Discord: dark panels, a
+-- segmented control for the views, and each alias shown as a card with a round initial and a ROLE or PERSON tag.
 -- Views: Personal (the player's own aliases, shown first), Guild (shared;
 -- officers edit it, everyone else reads it), Info (what the Beacon Discord
 -- Sync companion tool is, with a link to copy) and, for officers only, Log
@@ -12,9 +11,9 @@ local _, ns = ...
 -- Editable lists get a side panel editor (alias, display name, Discord ID,
 -- Role/Person) and an Import button; every list can be exported, searched by
 -- alias or display name, and filtered to roles or people.
--- /beacon and the minimap button open Options straight to this page. Options
--- can't be opened by an addon during combat, so that waits until combat ends.
--- Events: PLAYER_LOGIN (registers the page), PLAYER_REGEN_ENABLED (deferred open)
+-- /beacon and the minimap button open and close it. It's a plain window with
+-- no protected parts, so it opens in combat too. Escape closes it.
+-- Events: none
 -- SavedVariables: none (edits go through ns.SaveEntry and ns.DeleteEntry)
 ---------------------------------------------------------------------------
 local COMPANION_URL = "https://github.com/drackdaddy/BeaconDiscordSync"
@@ -42,9 +41,10 @@ local PEOPLE_COLORS = {
 	CreateColor(0.102, 0.600, 0.749),
 }
 
+local WINDOW_WIDTH, WINDOW_HEIGHT = 680, 560
+local TITLE_HEIGHT = 30
+
 local frame
-local category             -- the page's entry in Options > AddOns
-local openAfterCombat = false
 local current = "personal" -- view shown: "personal", "guild", "info" or "log"
 local selected             -- entry loaded in the editor, or nil for a new one
 local kind = "role"        -- Role/Person choice in the editor
@@ -428,18 +428,55 @@ local function CreateEditor(sidePanel)
 	frame.deleteButton:SetPoint("BOTTOMRIGHT", -16, 16)
 end
 
--- Builds the page. Options sizes and positions it, so everything is anchored
--- to its edges.
+-- Builds the window: a thin border, a title bar to drag it by and a close
+-- button, with the page in the area below. Named so Escape can close it.
+local function CreateWindow()
+	local window = CreateFrame("Frame", "BeaconFrame", UIParent)
+	window:SetSize(WINDOW_WIDTH, WINDOW_HEIGHT)
+	window:SetPoint("CENTER")
+	window:SetFrameStrata("HIGH")
+	window:SetToplevel(true)
+	window:SetMovable(true)
+	window:SetClampedToScreen(true)
+	window:EnableMouse(true)
+	window:Hide()
+	table.insert(UISpecialFrames, "BeaconFrame")
+	local border = window:CreateTexture(nil, "BACKGROUND", nil, -8)
+	border:SetAllPoints()
+	Fill(border, CARD_BORDER)
+
+	local titleBar = CreateFrame("Frame", nil, window)
+	titleBar:SetPoint("TOPLEFT", 1, -1)
+	titleBar:SetPoint("TOPRIGHT", -1, -1)
+	titleBar:SetHeight(TITLE_HEIGHT)
+	local titleBackground = titleBar:CreateTexture(nil, "BACKGROUND")
+	titleBackground:SetAllPoints()
+	Fill(titleBackground, FIELD)
+	titleBar:EnableMouse(true)
+	titleBar:RegisterForDrag("LeftButton")
+	titleBar:SetScript("OnDragStart", function() window:StartMoving() end)
+	titleBar:SetScript("OnDragStop", function() window:StopMovingOrSizing() end)
+	local titleText = titleBar:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+	titleText:SetPoint("LEFT", 12, 0)
+	titleText:SetText("Beacon")
+	titleText:SetTextColor(DIM_TEXT:GetRGB())
+	-- The template's own click hides only its parent, the title bar.
+	local close = CreateFrame("Button", nil, titleBar, "UIPanelCloseButton")
+	close:SetPoint("RIGHT", 2, 0)
+	close:SetScript("OnClick", function() window:Hide() end)
+	return window
+end
+
+-- Builds the page inside the window, below the title bar.
 local function CreatePage()
-	frame = CreateFrame("Frame")
+	local window = CreateWindow()
+	frame = CreateFrame("Frame", nil, window)
+	frame:SetPoint("TOPLEFT", 1, -(TITLE_HEIGHT + 1))
+	frame:SetPoint("BOTTOMRIGHT", -1, 1)
 	frame:SetScript("OnShow", function()
 		ns.RefreshManager()
 	end)
-	-- The lists aren't settings: Options' Okay, Cancel and Defaults leave them alone.
-	local function DoNothing() end
-	frame.OnCommit = DoNothing
-	frame.OnDefault = DoNothing
-	frame.OnRefresh = DoNothing
+	frame.window = window
 	local background = frame:CreateTexture(nil, "BACKGROUND")
 	background:SetAllPoints()
 	Fill(background, BACKGROUND)
@@ -684,25 +721,11 @@ function ns.RefreshManager()
 	LayoutBottomButtons()
 end
 
--- Opens Options to Beacon's page, or right after combat if the player is fighting.
-function ns.OpenManager()
-	if InCombatLockdown() then
-		openAfterCombat = true
-		ns.Print("Opens in Options when combat ends.")
-		return
+-- Opens the Beacon window, or closes it when it is already open. The window
+-- is built the first time it opens.
+function ns.ToggleManager()
+	if not frame then
+		CreatePage()
 	end
-	Settings.OpenToCategory(category:GetID())
+	frame.window:SetShown(not frame.window:IsShown())
 end
-
-ns.On("PLAYER_LOGIN", function()
-	CreatePage()
-	category = Settings.RegisterCanvasLayoutCategory(frame, "Beacon")
-	Settings.RegisterAddOnCategory(category)
-end)
-
-ns.On("PLAYER_REGEN_ENABLED", function()
-	if openAfterCombat then
-		openAfterCombat = false
-		ns.OpenManager()
-	end
-end)

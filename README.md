@@ -11,7 +11,7 @@ Beacon is a lightweight addon for **World of Warcraft: Forever** that lets you @
 - **Personal list**: Everyone can also keep their own aliases, which only they use.
 - **Import and export**: Paste many aliases at once, for example straight from a spreadsheet, or export a list to back it up or copy it elsewhere.
 - **Discord companion tool**: Fill your lists straight from your Discord server's members and roles with [Beacon Discord Sync](https://github.com/drackdaddy/BeaconDiscordSync), a separate download, and keep them in step as people join and leave.
-- **In the game's Options**: Your lists live under Options → AddOns → Beacon, and the minimap button opens them in one click.
+- **Its own window**: Your lists open in Beacon's own window, from the minimap button or `/beacon`, even in combat.
 - **Lightweight**: Beacon only changes text when you send a guild-chat message. It never posts on its own.
 
 ## Install
@@ -34,11 +34,11 @@ Your chat window shows `@Raid Team`, while Discord receives the real role or per
 
 `@everyone` and `@here` are always blocked. Beacon sends them as plain words so nobody pings the whole server by accident.
 
-Beacon's lists live in the game's **Options → AddOns → Beacon**. Click the Beacon minimap button, or type `/beacon`, to open them there directly. Drag the minimap button to move it around the minimap. Type `/beacon minimap` to hide or show it. If you're in combat, Options opens as soon as combat ends.
+Beacon's lists open in their own window. Click the Beacon minimap button, or type `/beacon`, to open or close it; it opens in combat too. Drag the window by its title bar to move it, and press Escape to close it. Drag the minimap button to move it around the minimap. Type `/beacon minimap` to hide or show it.
 
 ## Your two lists
 
-Use the **Personal** and **Guild** buttons at the top of Beacon's page to switch lists. It opens on **Personal**:
+Use **Personal** and **Guild** at the top of Beacon's window to switch lists. It opens on **Personal**:
 
 - **Personal**: your own aliases. You can add, change and delete them, and they're never sent to anyone. If a personal alias has the same name as a guild alias, your personal one is used. Your personal list is shared by all your characters on this account.
 - **Guild**: the shared list your officers keep. Everyone else can see it but not change it.

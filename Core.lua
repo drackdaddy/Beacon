@@ -508,7 +508,7 @@ end
 
 ---------------------------------------------------------------------------
 -- Slash command
--- /beacon opens Beacon in Options > AddOns; /beacon minimap shows or hides the
+-- /beacon opens or closes the Beacon window; /beacon minimap shows or hides the
 -- minimap button; /beacon discord offers the companion tool's latest export.
 ---------------------------------------------------------------------------
 SLASH_BEACON1 = "/beacon"
@@ -519,6 +519,6 @@ SlashCmdList.BEACON = function(input)
 	elseif command == "discord" then
 		ns.OfferDiscordImport()
 	else
-		ns.OpenManager()
+		ns.ToggleManager()
 	end
 end
