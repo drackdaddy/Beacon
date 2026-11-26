@@ -1,4 +1,4 @@
-local _, ns = ...
+local addonName, ns = ...
 
 ---------------------------------------------------------------------------
 -- Beacon window
@@ -491,7 +491,7 @@ local function CreateEditor(sidePanel)
 end
 
 -- Builds the window, named so Escape can close it, and everything in it. The
--- header (logo, name and view switcher) is where the window is dragged from.
+-- header (logo, name and version, view switcher) is where the window is dragged from.
 local function CreateWindow()
 	frame = CreateFrame("Frame", "BeaconFrame", UIParent)
 	frame:SetSize(WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -526,11 +526,16 @@ local function CreateWindow()
 	logoMask:SetAllPoints(logo)
 	logoMask:SetTexture(ROUNDED, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 	logo:AddMaskTexture(logoMask)
+	-- The name with the version from the TOC under it, together as tall as the logo.
 	local title = header:CreateFontString(nil, "ARTWORK", "GameFontHighlightHuge")
-	title:SetPoint("LEFT", logo, "RIGHT", 10, 0)
+	title:SetPoint("TOPLEFT", logo, "TOPRIGHT", 10, 1)
 	title:SetText("Beacon")
+	local version = header:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+	version:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 1, -1)
+	version:SetText("v" .. C_AddOns.GetAddOnMetadata(addonName, "Version"))
+	version:SetTextColor(DIM_TEXT:GetRGB())
 	frame.viewChoice = CreateSegmented(header, { { "personal", "Personal" }, { "guild", "Guild" }, { "info", "Info" }, { "log", "Log" } }, 84, ShowView, true)
-	frame.viewChoice:SetPoint("LEFT", title, "RIGHT", 22, 0)
+	frame.viewChoice:SetPoint("LEFT", logo, "RIGHT", 10 + math.max(title:GetStringWidth(), version:GetStringWidth()) + 22, 0)
 
 	-- A flat close button: an X made of two thin crossed lines.
 	local close = CreateFrame("Button", nil, header)

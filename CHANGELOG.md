@@ -8,6 +8,7 @@
 - The editor sits in a side panel that shows the alias you're editing. **Save** and **Delete** are colored buttons, and a **+ New alias** card sits after the last alias.
 - Person mentions are now called **Gamer**, in the editor, the tags, the **Gamers** filter, Import and Export. Imports still accept `Person`, so older exports and the companion tool keep working.
 - New aliases start as **Gamer**.
+- The window shows Beacon's version under its name.
 - Made with the assistance of AI.
 
 ## 1.0.0 - First release
