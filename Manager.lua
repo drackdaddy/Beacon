@@ -18,6 +18,11 @@ local _, ns = ...
 ---------------------------------------------------------------------------
 local COMPANION_URL = "https://github.com/drackdaddy/BeaconDiscordSync"
 local AVATAR_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
+-- A white 32x32 rounded rectangle with 8-pixel corners. Drawn as a nine-slice,
+-- so it stretches to any size while the corners stay round, and tinted to
+-- any color. Every panel, card, button and field uses it.
+local ROUNDED = "Interface\\AddOns\\Beacon\\Rounded.png"
+local CORNER = 8
 
 -- Discord's dark theme colors.
 local BACKGROUND = CreateColor(0.192, 0.200, 0.220)
@@ -50,15 +55,24 @@ local selected             -- entry loaded in the editor, or nil for a new one
 local kind = "role"        -- Role/Person choice in the editor
 local showKind = "all"     -- list filter: "all", "role" or "user"
 
-local function Fill(texture, color)
-	texture:SetColorTexture(color:GetRGB())
+-- Gives texture rounded corners and tints it color, at alpha (default 1).
+local function Fill(texture, color, alpha)
+	texture:SetTexture(ROUNDED)
+	texture:SetTextureSliceMargins(CORNER, CORNER, CORNER, CORNER)
+	texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+	texture:SetVertexColor(color.r, color.g, color.b, alpha or 1)
+end
+
+-- Recolors a texture already set up by Fill.
+local function Tint(texture, color)
+	texture:SetVertexColor(color:GetRGB())
 end
 
 -- Adds a faint light overlay that the game shows while the mouse is over button.
 local function AddHover(button, anchor)
 	local hover = button:CreateTexture(nil, "HIGHLIGHT")
 	hover:SetAllPoints(anchor or button)
-	hover:SetColorTexture(1, 1, 1, 0.06)
+	Fill(hover, HIGHLIGHT_FONT_COLOR, 0.06)
 end
 
 -- Creates a flat Discord-style button filled with color.
@@ -163,7 +177,7 @@ local function SetAvatar(avatar, letter, alias, entryKind, id)
 	if entryKind == "user" then
 		color = PEOPLE_COLORS[(tonumber(id:sub(-1)) or 0) % #PEOPLE_COLORS + 1]
 	end
-	Fill(avatar, color)
+	avatar:SetColorTexture(color:GetRGB())
 	letter:SetText(alias ~= "" and alias:sub(1, 1):upper() or "+")
 end
 
@@ -277,6 +291,7 @@ local function InitCard(card, entry)
 	if not card.alias then
 		card.border = card:CreateTexture(nil, "BACKGROUND")
 		card.border:SetAllPoints()
+		Fill(card.border, CARD_BORDER)
 		local background = card:CreateTexture(nil, "BORDER")
 		background:SetPoint("TOPLEFT", 1, -1)
 		background:SetPoint("BOTTOMRIGHT", -1, 1)
@@ -287,6 +302,7 @@ local function InitCard(card, entry)
 		card.chip = card:CreateTexture(nil, "ARTWORK")
 		card.chip:SetSize(54, 16)
 		card.chip:SetPoint("RIGHT", -10, 0)
+		Fill(card.chip, ROLE_CHIP)
 		card.chipText = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 		card.chipText:SetPoint("CENTER", card.chip)
 		card.alias = card:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
@@ -310,9 +326,9 @@ local function InitCard(card, entry)
 	SetAvatar(card.avatar, card.letter, entry.alias, entry.kind, entry.id)
 	card.alias:SetText("@" .. entry.alias)
 	card.name:SetText(entry.name)
-	Fill(card.chip, entry.kind == "role" and ROLE_CHIP or PERSON_CHIP)
+	Tint(card.chip, entry.kind == "role" and ROLE_CHIP or PERSON_CHIP)
 	card.chipText:SetText(entry.kind == "role" and "ROLE" or "PERSON")
-	Fill(card.border, entry == selected and BLURPLE or CARD_BORDER)
+	Tint(card.border, entry == selected and BLURPLE or CARD_BORDER)
 end
 
 -- Formats a server timestamp for the log, such as "Nov 23 02:31 PM".
@@ -428,8 +444,9 @@ local function CreateEditor(sidePanel)
 	frame.deleteButton:SetPoint("BOTTOMRIGHT", -16, 16)
 end
 
--- Builds the window: a thin border, a title bar to drag it by and a close
--- button, with the page in the area below. Named so Escape can close it.
+-- Builds the window: rounded with a thin border, a title bar to drag it by and
+-- a flat close button, with the page in the area below. Named so Escape can
+-- close it.
 local function CreateWindow()
 	local window = CreateFrame("Frame", "BeaconFrame", UIParent)
 	window:SetSize(WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -444,14 +461,15 @@ local function CreateWindow()
 	local border = window:CreateTexture(nil, "BACKGROUND", nil, -8)
 	border:SetAllPoints()
 	Fill(border, CARD_BORDER)
+	local background = window:CreateTexture(nil, "BACKGROUND", nil, -7)
+	background:SetPoint("TOPLEFT", 1, -1)
+	background:SetPoint("BOTTOMRIGHT", -1, 1)
+	Fill(background, BACKGROUND)
 
 	local titleBar = CreateFrame("Frame", nil, window)
 	titleBar:SetPoint("TOPLEFT", 1, -1)
 	titleBar:SetPoint("TOPRIGHT", -1, -1)
 	titleBar:SetHeight(TITLE_HEIGHT)
-	local titleBackground = titleBar:CreateTexture(nil, "BACKGROUND")
-	titleBackground:SetAllPoints()
-	Fill(titleBackground, FIELD)
 	titleBar:EnableMouse(true)
 	titleBar:RegisterForDrag("LeftButton")
 	titleBar:SetScript("OnDragStart", function() window:StartMoving() end)
@@ -460,9 +478,18 @@ local function CreateWindow()
 	titleText:SetPoint("LEFT", 12, 0)
 	titleText:SetText("Beacon")
 	titleText:SetTextColor(DIM_TEXT:GetRGB())
-	-- The template's own click hides only its parent, the title bar.
-	local close = CreateFrame("Button", nil, titleBar, "UIPanelCloseButton")
-	close:SetPoint("RIGHT", 2, 0)
+	-- A flat close button: an X made of two thin crossed lines.
+	local close = CreateFrame("Button", nil, titleBar)
+	close:SetSize(24, 24)
+	close:SetPoint("RIGHT", -6, 0)
+	AddHover(close)
+	for _, angle in ipairs({ 45, -45 }) do
+		local line = close:CreateTexture(nil, "ARTWORK")
+		line:SetSize(12, 2)
+		line:SetPoint("CENTER")
+		line:SetColorTexture(MUTED_TEXT:GetRGB())
+		line:SetRotation(math.rad(angle))
+	end
 	close:SetScript("OnClick", function() window:Hide() end)
 	return window
 end
@@ -477,9 +504,6 @@ local function CreatePage()
 		ns.RefreshManager()
 	end)
 	frame.window = window
-	local background = frame:CreateTexture(nil, "BACKGROUND")
-	background:SetAllPoints()
-	Fill(background, BACKGROUND)
 
 	-- Header: logo, name and the view switcher. Log is last so hiding it from
 	-- members leaves no gap.
